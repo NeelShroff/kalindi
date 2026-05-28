@@ -14,13 +14,13 @@ def send_email_fallback(subject: str, body: str, to_email: str):
     print(body)
     print("=" * 60)
 
+import logging
+logger = logging.getLogger(__name__)
+
 def send_html_email(subject: str, html_content: str, to_email: str):
     """Sends an HTML email using smtplib."""
     if not settings.SMTP_HOST or not settings.SMTP_USER or not settings.SMTP_PASS:
-        # Fallback to plain text print in logs
-        send_email_fallback(subject, "[HTML Content - See server logs]", to_email)
-        print("HTML Content:")
-        print(html_content)
+        logger.warning(f"Mock email sent to {to_email}: {subject}")
         return False
         
     try:
@@ -53,12 +53,10 @@ def send_html_email(subject: str, html_content: str, to_email: str):
         server.sendmail(msg["From"], [to_email], msg.as_string())
         server.quit()
         
-        print(f"Successfully sent email to {to_email}")
+        logger.info(f"Successfully sent email to {to_email}")
         return True
     except Exception as e:
-        print(f"Error sending email to {to_email}: {str(e)}")
-        # Print fallback logs so we don't lose the email info
-        send_email_fallback(f"[FAILED SMTP] {subject}", f"Error: {e}\n\n", to_email)
+        logger.error(f"Error sending email to {to_email}: {str(e)}")
         return False
 
 def generate_customer_email_html(order, items) -> str:
