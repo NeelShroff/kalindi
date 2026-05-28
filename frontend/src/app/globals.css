@@ -1,0 +1,93 @@
+@import "tailwindcss";
+
+@theme {
+  --color-background: #0d0a14;
+  --color-foreground: #f0eaf8;
+  --color-kalindi-purple: #3d1a5c;
+  --color-kalindi-purple-dark: #1e0a2e;
+  --color-kalindi-purple-mid: #5a2d82;
+  --color-kalindi-pink: #e91e8c;
+  --color-kalindi-pink-light: #f472b6;
+  --color-kalindi-pink-dark: #be185d;
+  --color-kalindi-cream: #f0eaf8;
+  --color-kalindi-gold: #D4AF37;
+  --color-surface: rgba(61, 26, 92, 0.3);
+  --font-sans: var(--font-outfit);
+}
+
+@layer base {
+  body {
+    background-color: var(--color-background);
+    color: var(--color-foreground);
+    font-feature-settings: "rlig" 1, "calt" 1;
+    -webkit-font-smoothing: antialiased;
+  }
+}
+
+/* Lenis Smooth Scroll Setup */
+html.lenis, html.lenis body {
+  height: auto;
+}
+
+.lenis.lenis-smooth {
+  scroll-behavior: auto !important;
+}
+
+.lenis.lenis-smooth [data-lenis-prevent] {
+  overscroll-behavior: contain;
+}
+
+.lenis.lenis-stopped {
+  overflow: hidden;
+}
+
+.lenis.lenis-smooth iframe {
+  pointer-events: none;
+}
+
+/* ==========================================
+   Constant Background (Light Theme) Overrides
+   ========================================== */
+
+@layer base {
+  body {
+    background-color: #fdf2f8 !important;
+    color: #0f1a34 !important; /* Dark Blue */
+  }
+  body::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    background-image: url(/background2.png) !important;
+    background-size: cover !important;
+    background-attachment: fixed !important;
+    background-position: center !important;
+    background-repeat: no-repeat !important;
+    opacity: 0.12; /* Dull background image for maximum legibility */
+    z-index: -1;
+    pointer-events: none;
+  }
+}
+
+/* Force all website sections to be transparent to let the constant background show through */
+section, footer, main {
+  background-color: transparent !important;
+  background-image: none !important;
+}
+
+/* Disable dark background glows */
+div[class*="bg-[#3d1a5c]"],
+div[class*="bg-[#1e0a2e]"],
+div[class*="bg-[#08060f]"] {
+  background: transparent !important;
+  background-color: transparent !important;
+}
+
+/* Make glows very soft pink */
+div[class*="bg-[#e91e8c]/10"],
+div[class*="bg-[#e91e8c]/5"] {
+  background-color: rgba(233, 30, 140, 0.04) !important;
+}
+div[class*="bg-[#3d1a5c]/20"] {
+  background-color: rgba(233, 30, 140, 0.03) !important;
+}

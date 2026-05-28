@@ -1,0 +1,39 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_USER: kalindi_user
+      POSTGRES_PASSWORD: kalindi_password
+      POSTGRES_DB: kalindi_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+  backend:
+    build:
+      context: ./backend
+    ports:
+      - "8088:8088"
+    environment:
+      - DATABASE_URL=postgresql://kalindi_user:kalindi_password@postgres:5432/kalindi_db
+      - PORT=8088
+    volumes:
+      - ./backend/static/uploads:/app/static/uploads
+    depends_on:
+      - postgres
+
+  frontend:
+    build:
+      context: ./frontend
+    ports:
+      - "3000:3000"
+    environment:
+      - NEXT_PUBLIC_API_URL=http://localhost:8088
+    depends_on:
+      - backend
+
+volumes:
+  pgdata:
