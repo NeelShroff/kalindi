@@ -87,7 +87,8 @@ export default function CartDrawer() {
     };
 
     try {
-      const response = await fetch("http://localhost:8088/api/orders", {
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:8088';
+      const response = await fetch(`${apiUrl}/api/orders`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
