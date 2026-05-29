@@ -95,6 +95,7 @@ Let's craft the perfect custom hamper, evaluate your wellness needs, or answer q
 
   // Speech Recognition setup
   const recognitionRef = useRef<any>(null);
+  const isCreatingSessionRef = useRef(false);
 
   // Quiz State
   const [quizStep, setQuizStep] = useState(1);
@@ -181,6 +182,11 @@ Let's craft the perfect custom hamper, evaluate your wellness needs, or answer q
 
   // Load chat history when selected session changes
   useEffect(() => {
+    if (isCreatingSessionRef.current) {
+      isCreatingSessionRef.current = false;
+      return;
+    }
+
     if (currentSessionId && token) {
       fetchSessionMessages(currentSessionId, token);
     } else {
@@ -516,6 +522,7 @@ Let's craft the perfect custom hamper, evaluate your wellness needs, or answer q
         });
         if (res.ok) {
           sessionId = newUuid;
+          isCreatingSessionRef.current = true;
           setCurrentSessionId(newUuid);
           const newSess = await res.json();
           setSessions((prev) => [newSess, ...prev]);
@@ -1185,37 +1192,42 @@ Please diagnose my results and recommend a tailored luxury dry fruits selection 
             </div>
 
             {/* EMBEDDED DIAGNOSTIC TOOLS TRIGGER TABS (Inside header for maximum compactness) */}
-            <div className="flex items-center gap-1.5 max-w-[280px] xs:max-w-sm sm:max-w-md">
+            <div className="flex items-center gap-1 sm:gap-1.5">
               <button
                 onClick={() => setActivePanel(activePanel === "quiz" ? null : "quiz")}
-                className={`py-2 px-3 rounded-lg text-[10px] sm:text-xs font-bold uppercase tracking-wider transition-all duration-200 flex items-center gap-1 cursor-pointer border ${
+                className={`py-2 px-2.5 sm:px-3 rounded-lg text-[10px] sm:text-xs font-bold uppercase tracking-wider transition-all duration-200 flex items-center gap-1 cursor-pointer border ${
                   activePanel === "quiz"
                     ? "bg-[#3d1a5c] border-[#3d1a5c] text-white shadow-xs"
                     : "bg-purple-50 border border-purple-200/50 text-purple-900 hover:text-purple-955 hover:bg-purple-100/50"
                 }`}
+                title="Wellness Fit Quiz"
               >
-                <Compass className="w-3.5 h-3.5" /> <span className="hidden xs:inline">Wellness Fit</span> Quiz
-                {activePanel === "quiz" ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
+                <Compass className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline">Quiz</span>
+                <span className="hidden sm:inline-block ml-0.5">{activePanel === "quiz" ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}</span>
               </button>
 
               <button
                 onClick={() => setActivePanel(activePanel === "hamper" ? null : "hamper")}
-                className={`py-2 px-3 rounded-lg text-[10px] sm:text-xs font-bold uppercase tracking-wider transition-all duration-200 flex items-center gap-1 cursor-pointer border ${
+                className={`py-2 px-2.5 sm:px-3 rounded-lg text-[10px] sm:text-xs font-bold uppercase tracking-wider transition-all duration-200 flex items-center gap-1 cursor-pointer border ${
                   activePanel === "hamper"
                     ? "bg-[#3d1a5c] border-[#3d1a5c] text-white shadow-xs"
                     : "bg-purple-50 border border-purple-200/50 text-purple-900 hover:text-purple-955 hover:bg-purple-100/50"
                 }`}
+                title="Bespoke Hamper Builder"
               >
-                <Gift className="w-3.5 h-3.5" /> <span className="hidden xs:inline">Bespoke</span> Hamper
-                {activePanel === "hamper" ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
+                <Gift className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline">Hamper</span>
+                <span className="hidden sm:inline-block ml-0.5">{activePanel === "hamper" ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}</span>
               </button>
 
               <button
                 onClick={handleAddLastOrderToCart}
-                className="py-2 px-3 rounded-lg text-[10px] sm:text-xs font-bold uppercase tracking-wider bg-purple-50 border border-purple-200/50 text-purple-900 hover:text-purple-955 hover:bg-purple-100/50 flex items-center gap-1 cursor-pointer transition-colors"
+                className="py-2 px-2.5 sm:px-3 rounded-lg text-[10px] sm:text-xs font-bold uppercase tracking-wider bg-purple-50 border border-purple-200/50 text-purple-900 hover:text-purple-955 hover:bg-purple-100/50 flex items-center gap-1 cursor-pointer transition-colors"
                 title="Reorder Last Purchase"
               >
-                <RotateCcw className="w-3.5 h-3.5 text-purple-700" /> <span>Reorder</span>
+                <RotateCcw className="w-3.5 h-3.5 text-purple-700" />
+                <span className="hidden sm:inline">Reorder</span>
               </button>
 
               <button
