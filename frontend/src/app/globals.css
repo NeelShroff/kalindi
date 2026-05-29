@@ -70,24 +70,40 @@ html.lenis, html.lenis body {
 }
 
 /* Force all website sections to be transparent to let the constant background show through */
-section, footer, main {
+section, footer {
   background-color: transparent !important;
   background-image: none !important;
 }
 
-/* Disable dark background glows */
-div[class*="bg-[#3d1a5c]"],
-div[class*="bg-[#1e0a2e]"],
-div[class*="bg-[#08060f]"] {
+/* Main gets transparent treatment everywhere EXCEPT on the assistance/concierge page */
+main:not([data-page="assistance"]) {
+  background-color: transparent !important;
+  background-image: none !important;
+}
+
+/* Disable dark background glows — but NOT on the assistance/concierge page */
+body:not([data-page-id="assistance"]) div[class*="bg-[#3d1a5c]"],
+body:not([data-page-id="assistance"]) div[class*="bg-[#1e0a2e]"],
+body:not([data-page-id="assistance"]) div[class*="bg-[#08060f]"] {
   background: transparent !important;
   background-color: transparent !important;
 }
 
-/* Make glows very soft pink */
-div[class*="bg-[#e91e8c]/10"],
-div[class*="bg-[#e91e8c]/5"] {
+/* Make glows very soft pink — only on non-assistance pages */
+body:not([data-page-id="assistance"]) div[class*="bg-[#e91e8c]/10"],
+body:not([data-page-id="assistance"]) div[class*="bg-[#e91e8c]/5"] {
   background-color: rgba(233, 30, 140, 0.04) !important;
 }
-div[class*="bg-[#3d1a5c]/20"] {
+body:not([data-page-id="assistance"]) div[class*="bg-[#3d1a5c]/20"] {
   background-color: rgba(233, 30, 140, 0.03) !important;
+}
+
+/* Fix h-screen on assistance page when Lenis sets html height: auto */
+[data-page="assistance"],
+[data-page="assistance"] ~ * {
+  height: auto;
+}
+.assistance-root {
+  height: 100dvh !important;
+  overflow: hidden !important;
 }

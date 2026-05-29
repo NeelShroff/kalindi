@@ -53,6 +53,17 @@ def create_order(
     
     return order
 
+@router.get("/last", response_model=OrderResponse)
+def get_last_order(email: str, db: Session = Depends(get_db)):
+    """Fetch the most recent order for a customer by email (Public)."""
+    order = db.query(Order).filter(Order.customer_email == email).order_by(Order.created_at.desc()).first()
+    if not order:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="No previous orders found for this email address."
+        )
+    return order
+
 @router.get("", response_model=List[OrderResponse])
 def get_orders(
     db: Session = Depends(get_db),

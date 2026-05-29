@@ -90,3 +90,78 @@ class OrderResponse(OrderBase):
 
     class Config:
         from_attributes = True
+
+# Google Auth and User Schemas
+class GoogleLoginRequest(BaseModel):
+    credential: Optional[str] = None
+    is_demo: Optional[bool] = False
+    email: Optional[str] = None
+    name: Optional[str] = None
+    picture: Optional[str] = None
+
+class UserResponse(BaseModel):
+    id: int
+    email: str
+    name: Optional[str] = None
+    picture: Optional[str] = None
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+class AuthResponse(BaseModel):
+    access_token: str
+    token_type: str
+    user: UserResponse
+
+# History and Memory Schemas
+class ChatMessageResponse(BaseModel):
+    id: int
+    session_id: str
+    role: str
+    content: str
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+class ChatSessionResponse(BaseModel):
+    id: str
+    title: str
+    created_at: datetime
+    updated_at: datetime
+
+    class Config:
+        from_attributes = True
+
+class ChatSessionDetailResponse(ChatSessionResponse):
+    messages: List[ChatMessageResponse] = []
+
+    class Config:
+        from_attributes = True
+
+class CreateSessionRequest(BaseModel):
+    id: str
+    title: str
+
+class CreateMessageRequest(BaseModel):
+    role: str
+    content: str
+
+class UpdateSessionTitleRequest(BaseModel):
+    title: str
+
+class UpdateMemoryRequest(BaseModel):
+    key: str
+    value: str
+
+class UserMemoryResponse(BaseModel):
+    id: int
+    key: str
+    value: str
+    updated_at: datetime
+
+    class Config:
+        from_attributes = True
+
+

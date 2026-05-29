@@ -9,7 +9,6 @@ import Testimonials from "@/components/sections/Testimonials";
 import BrandStory from "@/components/sections/BrandStory";
 import FAQ from "@/components/sections/FAQ";
 import Footer from "@/components/sections/Footer";
-import CartDrawer from "@/components/CartDrawer";
 
 export default function Home() {
   return (
@@ -25,7 +24,6 @@ export default function Home() {
       <BrandStory />
       <FAQ />
       <Footer />
-      <CartDrawer />
     </main>
   );
 }

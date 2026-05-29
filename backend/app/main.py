@@ -4,7 +4,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from .database import engine, Base, SessionLocal
 from .models import Product
-from .routes import auth, products, orders, uploads
+from .routes import auth, products, orders, uploads, agent, history
 from .config import settings
 
 # Create database tables
@@ -35,6 +35,10 @@ app.include_router(auth.router)
 app.include_router(products.router)
 app.include_router(orders.router)
 app.include_router(uploads.router)
+app.include_router(agent.router)
+app.include_router(history.router)
+
+
 
 # Seed default products if database is empty
 def seed_products():

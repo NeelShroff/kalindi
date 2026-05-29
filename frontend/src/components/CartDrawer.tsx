@@ -31,6 +31,27 @@ export default function CartDrawer() {
   
   const [errors, setErrors] = useState<Record<string, string>>({});
 
+  // Auto-fill checkout fields if user profile is saved in localStorage
+  React.useEffect(() => {
+    if (step === "checkout") {
+      try {
+        const savedProfile = localStorage.getItem("kalindi_user_profile");
+        if (savedProfile) {
+          const parsed = JSON.parse(savedProfile);
+          if (parsed && parsed.email) {
+            setForm((prev) => ({
+              ...prev,
+              name: prev.name || parsed.name || "",
+              email: prev.email || parsed.email || "",
+            }));
+          }
+        }
+      } catch (e) {
+        console.error("Failed to parse user profile from localStorage:", e);
+      }
+    }
+  }, [step]);
+
   if (!isCartOpen) return null;
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
@@ -139,13 +160,13 @@ export default function CartDrawer() {
         className="absolute inset-0 bg-black/60 backdrop-blur-sm"
       />
 
-      <div className="absolute inset-y-0 right-0 max-w-full flex pl-10">
+      <div className="absolute inset-y-0 right-0 max-w-full flex sm:pl-10">
         <motion.div
           initial={{ x: "100%" }}
           animate={{ x: 0 }}
           exit={{ x: "100%" }}
           transition={{ type: "tween", duration: 0.4, ease: "easeInOut" }}
-          className="w-screen max-w-md bg-[#0f0717]/95 border-l border-purple-500/20 backdrop-blur-2xl shadow-2xl flex flex-col text-white"
+          className="w-full sm:w-screen max-w-md bg-[#0f0717]/95 border-l border-purple-500/20 backdrop-blur-2xl shadow-2xl flex flex-col text-white"
         >
           {/* Header */}
           <div className="p-6 border-b border-purple-500/10 flex items-center justify-between">
@@ -224,9 +245,19 @@ export default function CartDrawer() {
                           key={item.cart_item_id}
                           className="flex items-center gap-4 bg-white/[0.02] border border-white/5 rounded-2xl p-4 hover:border-purple-500/10 transition-colors"
                         >
-                          {/* Image Placeholder with color gradient */}
-                          <div className={`w-16 h-16 rounded-xl flex-shrink-0 bg-gradient-to-br ${item.color || "from-purple-900 to-indigo-950"} relative overflow-hidden flex items-center justify-center`}>
-                            <span className="text-white/10 text-2xl font-black">K</span>
+                          {/* Product Image */}
+                          <div className="w-16 h-16 rounded-xl flex-shrink-0 relative overflow-hidden bg-white/5 flex items-center justify-center border border-white/5">
+                            {item.image_url ? (
+                              <img
+                                src={item.image_url}
+                                alt={item.name}
+                                className="w-full h-full object-cover"
+                              />
+                            ) : (
+                              <div className={`w-full h-full bg-gradient-to-br ${item.color || "from-purple-900 to-indigo-950"} flex items-center justify-center`}>
+                                <span className="text-white/10 text-2xl font-black">K</span>
+                              </div>
+                            )}
                           </div>
 
                           {/* Info */}

@@ -38,7 +38,7 @@ const reasons = [
 
 export default function WhyKalindi() {
   return (
-    <section id="why-kalindi" className="relative py-32 px-6 z-10 bg-[#0a0713]">
+    <section id="why-kalindi" className="relative pt-14 pb-32 px-6 z-10 bg-[#0a0713]">
       {/* Background glow */}
       <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[600px] h-[300px] bg-[#e91e8c]/10 blur-[120px] pointer-events-none" />
 

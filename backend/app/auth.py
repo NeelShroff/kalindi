@@ -58,3 +58,36 @@ def get_current_admin(token: str = Depends(oauth2_scheme)) -> str:
         return username
     except jwt.PyJWTError:
         raise credentials_exception
+
+from sqlalchemy.orm import Session
+from .database import get_db
+from .models import User
+
+def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)) -> User:
+    """Verifies the JWT token and returns the logged-in User database object."""
+    credentials_exception = HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail="Could not validate credentials",
+        headers={"WWW-Authenticate": "Bearer"},
+    )
+    if not token:
+        raise credentials_exception
+    try:
+        payload = jwt.decode(token, settings.JWT_SECRET, algorithms=[settings.JWT_ALGORITHM])
+        sub: str = payload.get("sub")
+        if sub is None:
+            raise credentials_exception
+        # First check if the sub is an integer representing a user ID
+        try:
+            user_id = int(sub)
+            user = db.query(User).filter(User.id == user_id).first()
+            if user is not None:
+                return user
+        except ValueError:
+            pass
+            
+        # fallback: check if username matches admin (if required)
+        raise credentials_exception
+    except jwt.PyJWTError:
+        raise credentials_exception
+

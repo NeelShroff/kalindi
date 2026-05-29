@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useMemo, useRef, useEffect, useState } from "react";
+import React, { Suspense, useMemo, useRef, useEffect, useState } from "react";
 import { Canvas, useFrame } from "@react-three/fiber";
 import {
   Environment,
@@ -25,7 +25,7 @@ function Almond({ position, rotation, scale }: FloatingProps) {
   const { scene } = useGLTF("/almond.glb");
   const groupRef = useRef<THREE.Group>(null!);
 
-  useFrame((state) => {
+  useFrame((state: any) => {
     if (!groupRef.current) return;
     groupRef.current.rotation.y += 0.003;
     groupRef.current.position.y =
@@ -76,7 +76,7 @@ function Lotus({
     });
   }, [position]);
 
-  useFrame((state) => {
+  useFrame((state: any) => {
     if (!groupRef.current) return;
     // Gentle floating motion multiplied by floatAmp
     const time = state.clock.elapsedTime;
@@ -148,7 +148,7 @@ function Cashew({ position, rotation, scale }: FloatingProps) {
   const { scene } = useGLTF("/cashew.glb");
   const groupRef = useRef<THREE.Group>(null!);
 
-  useFrame((state) => {
+  useFrame((state: any) => {
     if (!groupRef.current) return;
     groupRef.current.rotation.y -= 0.004;
     groupRef.current.position.y =
@@ -168,7 +168,7 @@ function Walnut({ position, rotation, scale }: FloatingProps) {
   const { scene } = useGLTF("/walnut.glb");
   const groupRef = useRef<THREE.Group>(null!);
 
-  useFrame((state) => {
+  useFrame((state: any) => {
     if (!groupRef.current) return;
     groupRef.current.rotation.y += 0.003;
     groupRef.current.position.y =
@@ -186,7 +186,7 @@ function Walnut({ position, rotation, scale }: FloatingProps) {
 
 
 
-function Scene({ logoRef, onLoaded }: { logoRef: React.RefObject<HTMLDivElement | null>; onLoaded: () => void }) {
+function Scene({ logoRef, onLoaded, isMobile }: { logoRef: React.RefObject<HTMLDivElement | null>; onLoaded: () => void; isMobile: boolean }) {
   useEffect(() => {
     // When this component mounts, Suspense has resolved and all GLTFs are loaded
     onLoaded();
@@ -205,43 +205,43 @@ function Scene({ logoRef, onLoaded }: { logoRef: React.RefObject<HTMLDivElement 
       <pointLight position={[0, -3, -5]} intensity={1} color="#f472b6" />
 
       {/* Almonds scattered on the LEFT */}
-      <Almond position={[-3.5, 1, 0.5]} rotation={[0.2, 0.5, 0]} scale={0.015} />
-      <Almond position={[-4.2, -1.5, 1]} rotation={[0.3, 0.2, 0]} scale={0.012} />
-      <Almond position={[-2.8, 2.5, -1.5]} rotation={[0.5, 0.1, 0.4]} scale={0.014} />
-      <Almond position={[-4.5, -0.2, 0.5]} rotation={[0.6, 0.1, 0.2]} scale={0.01} />
-      <Almond position={[-3.0, -2.5, 1.0]} rotation={[0.4, 0.2, 0.7]} scale={0.015} />
+      <Almond position={[isMobile ? -1.8 : -3.5, 1, 0.5]} rotation={[0.2, 0.5, 0]} scale={isMobile ? 0.009 : 0.015} />
+      <Almond position={[isMobile ? -2.2 : -4.2, -1.5, 1]} rotation={[0.3, 0.2, 0]} scale={isMobile ? 0.007 : 0.012} />
+      <Almond position={[isMobile ? -1.5 : -2.8, 2.5, -1.5]} rotation={[0.5, 0.1, 0.4]} scale={isMobile ? 0.008 : 0.014} />
+      <Almond position={[isMobile ? -2.3 : -4.5, -0.2, 0.5]} rotation={[0.6, 0.1, 0.2]} scale={isMobile ? 0.006 : 0.01} />
+      <Almond position={[isMobile ? -1.6 : -3.0, -2.5, 1.0]} rotation={[0.4, 0.2, 0.7]} scale={isMobile ? 0.009 : 0.015} />
 
       {/* Almonds scattered on the RIGHT */}
-      <Almond position={[3.2, -1.2, 1]} rotation={[0.3, 0.2, 0]} scale={0.012} />
-      <Almond position={[4.5, 3.0, 0.5]} rotation={[0.1, 0.6, 0.2]} scale={0.01} />
-      <Almond position={[4.0, -0.5, -2.0]} rotation={[0.7, 0.3, 0.1]} scale={0.014} />
-      <Almond position={[3.8, 1.5, 0.3]} rotation={[0.1, 0.7, 0.5]} scale={0.011} />
-      <Almond position={[3.5, -2.5, -0.5]} rotation={[0.2, 0.5, 0]} scale={0.013} />
+      <Almond position={[isMobile ? 1.6 : 3.2, -1.2, 1]} rotation={[0.3, 0.2, 0]} scale={isMobile ? 0.007 : 0.012} />
+      <Almond position={[isMobile ? 2.2 : 4.5, 3.0, 0.5]} rotation={[0.1, 0.6, 0.2]} scale={isMobile ? 0.006 : 0.01} />
+      <Almond position={[isMobile ? 1.8 : 4.0, -0.5, -2.0]} rotation={[0.7, 0.3, 0.1]} scale={isMobile ? 0.008 : 0.014} />
+      <Almond position={[isMobile ? 1.7 : 3.8, 1.5, 0.3]} rotation={[0.1, 0.7, 0.5]} scale={isMobile ? 0.006 : 0.011} />
+      <Almond position={[isMobile ? 1.6 : 3.5, -2.5, -0.5]} rotation={[0.2, 0.5, 0]} scale={isMobile ? 0.007 : 0.013} />
 
       {/* Cashews scattered on the LEFT */}
-      <Cashew position={[-4.5, -3, 2]} rotation={[0.3, 0.1, 0.5]} scale={0.35} />
-      <Cashew position={[-3.2, 0.5, -2.5]} rotation={[0.5, 0.8, 0.1]} scale={0.3} />
-      <Cashew position={[-2.5, -1.5, -1.0]} rotation={[0.6, 0.2, 0.4]} scale={0.28} />
-      <Cashew position={[-3.8, 2.0, 0.5]} rotation={[0.4, 0.3, 0.8]} scale={0.34} />
+      <Cashew position={[isMobile ? -2.1 : -4.5, -3, 2]} rotation={[0.3, 0.1, 0.5]} scale={isMobile ? 0.21 : 0.35} />
+      <Cashew position={[isMobile ? -1.6 : -3.2, 0.5, -2.5]} rotation={[0.5, 0.8, 0.1]} scale={isMobile ? 0.18 : 0.3} />
+      <Cashew position={[isMobile ? -1.3 : -2.5, -1.5, -1.0]} rotation={[0.6, 0.2, 0.4]} scale={isMobile ? 0.16 : 0.28} />
+      <Cashew position={[isMobile ? -1.9 : -3.8, 2.0, 0.5]} rotation={[0.4, 0.3, 0.8]} scale={isMobile ? 0.2 : 0.34} />
 
       {/* Cashews scattered on the RIGHT */}
-      <Cashew position={[4.2, 3, -2]} rotation={[0.1, 0.4, 0.2]} scale={0.3} />
-      <Cashew position={[3.5, 1.5, 1.5]} rotation={[0.2, 0.5, 0.8]} scale={0.35} />
-      <Cashew position={[3.0, -2.5, 2.0]} rotation={[0.1, 0.7, 0.3]} scale={0.25} />
-      <Cashew position={[4.5, -1.0, -0.4]} rotation={[0.8, 0.1, 0.3]} scale={0.32} />
+      <Cashew position={[isMobile ? 2.0 : 4.2, 3, -2]} rotation={[0.1, 0.4, 0.2]} scale={isMobile ? 0.18 : 0.3} />
+      <Cashew position={[isMobile ? 1.7 : 3.5, 1.5, 1.5]} rotation={[0.2, 0.5, 0.8]} scale={isMobile ? 0.21 : 0.35} />
+      <Cashew position={[isMobile ? 1.5 : 3.0, -2.5, 2.0]} rotation={[0.1, 0.7, 0.3]} scale={isMobile ? 0.15 : 0.25} />
+      <Cashew position={[isMobile ? 2.2 : 4.5, -1.0, -0.4]} rotation={[0.8, 0.1, 0.3]} scale={isMobile ? 0.19 : 0.32} />
 
       {/* Walnuts scattered on the LEFT */}
-      <Walnut position={[-3.8, 0, -1]} rotation={[0.4, 0.2, 0.1]} scale={9.0} />
-      <Walnut position={[-2.6, -2, 0.8]} rotation={[0.1, 0.5, 0.3]} scale={9.0} />
-      <Walnut position={[-4.0, 2.2, -0.5]} rotation={[0.3, 0.1, 0.6]} scale={8.0} />
+      <Walnut position={[isMobile ? -1.8 : -3.8, 0, -1]} rotation={[0.4, 0.2, 0.1]} scale={isMobile ? 5.0 : 9.0} />
+      <Walnut position={[isMobile ? -1.3 : -2.6, -2, 0.8]} rotation={[0.1, 0.5, 0.3]} scale={isMobile ? 5.0 : 9.0} />
+      <Walnut position={[isMobile ? -1.9 : -4.0, 2.2, -0.5]} rotation={[0.3, 0.1, 0.6]} scale={isMobile ? 4.5 : 8.0} />
 
       {/* Walnuts scattered on the RIGHT */}
-      <Walnut position={[3.6, -0.8, -0.5]} rotation={[0.2, 0.3, 0.4]} scale={9.0} />
-      <Walnut position={[2.8, 2, -1.5]} rotation={[0.5, 0.1, 0.2]} scale={9.0} />
-      <Walnut position={[4.2, -2.2, 0.5]} rotation={[0.1, 0.6, 0.3]} scale={8.0} />
+      <Walnut position={[isMobile ? 1.7 : 3.6, -0.8, -0.5]} rotation={[0.2, 0.3, 0.4]} scale={isMobile ? 5.0 : 9.0} />
+      <Walnut position={[isMobile ? 1.4 : 2.8, 2, -1.5]} rotation={[0.5, 0.1, 0.2]} scale={isMobile ? 5.0 : 9.0} />
+      <Walnut position={[isMobile ? 2.0 : 4.2, -2.2, 0.5]} rotation={[0.1, 0.6, 0.3]} scale={isMobile ? 4.5 : 8.0} />
 
       {/* Interactive Lotus below the logo in the center */}
-      <Lotus position={[0, -1, 0]} rotation={[0, 0, 0]} scale={0.032} logoRef={logoRef} />
+      <Lotus position={[0, isMobile ? -0.5 : -1, 0]} rotation={[0, 0, 0]} scale={isMobile ? 0.018 : 0.032} logoRef={logoRef} />
 
       <Environment preset="city" />
 
@@ -261,10 +261,17 @@ export default function KalindiHero() {
   const logoRef = useRef<HTMLDivElement>(null);
   const [isLoaded, setIsLoaded] = useState(false);
   const [mounted, setMounted] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
   const handleLoaded = useMemo(() => () => setIsLoaded(true), []);
 
   useEffect(() => {
     setMounted(true);
+    
+    const handleResize = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+    handleResize();
+    window.addEventListener("resize", handleResize);
     
     // Suppress harmless Three.js WebGL and Clock warnings to keep the console clean
     const originalWarn = console.warn;
@@ -276,24 +283,19 @@ export default function KalindiHero() {
     };
     
     return () => {
+      window.removeEventListener("resize", handleResize);
       console.warn = originalWarn;
     };
   }, []);
 
   return (
-    <section className="relative h-[140vh] w-full overflow-hidden bg-transparent">
-      {/* DEBUG OVERLAY */}
-      <div className="absolute top-20 left-0 z-50 bg-black/80 text-white p-4 font-mono text-sm">
-        mounted: {mounted ? "true" : "false"}<br/>
-        isLoaded: {isLoaded ? "true" : "false"}
-      </div>
-      
+    <section className="relative h-[120vh] md:h-[140vh] w-full overflow-hidden bg-transparent">
       {/* 3D Canvas wrapper to ensure absolute positioning and correct R3F size */}
       <div className="absolute inset-0 w-full h-full z-0">
         {mounted && (
-          <Canvas camera={{ position: [0, 4, 6.928], fov: 45 }} gl={{ antialias: true }}>
+          <Canvas camera={{ position: [0, 4, isMobile ? 8.5 : 6.928], fov: isMobile ? 50 : 45 }} gl={{ antialias: true }}>
             <Suspense fallback={null}>
-              <Scene logoRef={logoRef} onLoaded={handleLoaded} />
+              <Scene logoRef={logoRef} onLoaded={handleLoaded} isMobile={isMobile} />
             </Suspense>
           </Canvas>
         )}
@@ -336,7 +338,7 @@ export default function KalindiHero() {
           className="absolute bottom-28 left-1/2 -translate-x-1/2 flex flex-col sm:flex-row gap-6 items-center justify-center z-20 pointer-events-auto"
         >
           <a
-            href="#shop"
+            href="/collection"
             className="group relative px-8 py-4 rounded-full font-medium text-lg text-white overflow-hidden shadow-[0_0_40px_rgba(233,30,140,0.4)]"
           >
             <div className="absolute inset-0 bg-gradient-to-r from-[#e91e8c] to-[#d4af37] transition-transform duration-500 group-hover:scale-105" />

@@ -20,5 +20,7 @@ class Settings:
     SMTP_PASS: str = os.getenv("SMTP_PASS", "")
     SENDER_EMAIL: str = os.getenv("SENDER_EMAIL", "")
     OWNER_EMAIL: str = os.getenv("OWNER_EMAIL", "")
+    GROQ_API_KEY: str = os.getenv("GROQ_API_KEY", "")
 
 settings = Settings()
+

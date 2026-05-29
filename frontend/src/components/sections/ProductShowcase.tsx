@@ -2,9 +2,9 @@
 
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { ShoppingCart, Star } from "lucide-react";
-import Image from "next/image";
-import { useCart } from "@/context/CartContext";
+import { ShoppingCart } from "lucide-react";
+import Link from "next/link";
+import ProductCard from "../ProductCard";
 
 interface Product {
   id: number;
@@ -20,7 +20,6 @@ interface Product {
   reviews: number;
 }
 
-// Fallback seed products in case API is loading or unavailable
 const fallbackProducts: Product[] = [
   {
     id: 1,
@@ -129,9 +128,7 @@ const fallbackProducts: Product[] = [
 ];
 
 export default function ProductShowcase() {
-  const { addToCart } = useCart();
   const [productsList, setProductsList] = useState<Product[]>(fallbackProducts);
-  const [selectedWeights, setSelectedWeights] = useState<Record<number, string>>({});
   const [isLoading, setIsLoading] = useState(true);
 
   // Fetch products from backend on mount
@@ -155,75 +152,11 @@ export default function ProductShowcase() {
     fetchProducts();
   }, []);
 
-  const getFallbackImage = (productName: string) => {
-    const lower = productName.toLowerCase();
-    if (lower.includes("almond")) return "/almonds.png";
-    if (lower.includes("pistachio")) return "/pistachios.png";
-    if (lower.includes("cashew")) return "/cashews.png";
-    if (lower.includes("date")) return "/dates.png";
-    if (lower.includes("fig")) return "/figs.png";
-    if (lower.includes("raisin")) return "/raisins.png";
-    if (lower.includes("makhana") || lower.includes("fox")) return "/makhana.png";
-    return "/giftbox.png";
-  };
-
-  const getProductImage = (product: Product) => {
-    if (product.image_url) {
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8088";
-      return product.image_url.startsWith("/static") ? `${apiUrl}${product.image_url}` : product.image_url;
-    }
-    return getFallbackImage(product.name);
-  };
-
-  // Determine weight option list for a product
-  const getWeightOptions = (product: Product) => {
-    const options = [];
-    if (product.price_250g !== null) options.push("250g");
-    if (product.price_500g !== null) options.push("500g");
-    if (product.price_1000g !== null) options.push("1kg"); // 1000g represented as 1kg for premium branding
-    return options;
-  };
-
-  // Get selected weight for a product
-  const getSelectedWeight = (product: Product) => {
-    if (selectedWeights[product.id]) {
-      return selectedWeights[product.id];
-    }
-    const options = getWeightOptions(product);
-    return options[0] || "500g";
-  };
-
-  // Get price for selected weight
-  const getSelectedPrice = (product: Product, weight: string) => {
-    if (weight === "250g") return product.price_250g || 0;
-    if (weight === "500g") return product.price_500g || 0;
-    if (weight === "1kg") return product.price_1000g || 0;
-    return 0;
-  };
-
-  const handleWeightSelect = (productId: number, weight: string, e: React.MouseEvent) => {
-    e.stopPropagation();
-    setSelectedWeights((prev) => ({ ...prev, [productId]: weight }));
-  };
-
-  const handleAddToCartClick = (product: Product, e: React.MouseEvent) => {
-    e.stopPropagation();
-    const weight = getSelectedWeight(product);
-    const price = getSelectedPrice(product, weight);
-    
-    // Map product structure to Cart item structure
-    const cartProduct = {
-      id: product.id,
-      name: product.name,
-      image_url: getProductImage(product),
-      color: product.color || "from-[#D2B48C] to-[#8B6914]"
-    };
-    
-    addToCart(cartProduct, weight, price);
-  };
+  // Limit to exactly 8 newly added items
+  const displayProducts = productsList.slice(0, 8);
 
   return (
-    <section id="products" className="relative py-32 px-6 z-10">
+    <section id="products" className="relative pt-32 pb-14 px-6 z-10">
       <div className="max-w-7xl mx-auto">
         {/* Header */}
         <motion.div
@@ -237,9 +170,9 @@ export default function ProductShowcase() {
             Our Collection
           </span>
           <h2 className="text-5xl md:text-6xl font-bold mb-6 tracking-tight text-amber-950">
-            Premium{" "}
+            Newly Added{" "}
             <span className="bg-gradient-to-r from-[#D4AF37] to-amber-700 bg-clip-text text-transparent">
-              Products
+              Items
             </span>
           </h2>
           <p className="text-xl text-amber-900/70 max-w-2xl mx-auto font-light">
@@ -249,95 +182,9 @@ export default function ProductShowcase() {
 
         {/* Products Grid */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-          {productsList.map((product, i) => {
-            const weightOptions = getWeightOptions(product);
-            const selectedWeight = getSelectedWeight(product);
-            const price = getSelectedPrice(product, selectedWeight);
-            const originalPrice = Math.round(price * 1.3); // Dynamic original price calculation
-
-            return (
-              <motion.div
-                key={product.id}
-                initial={{ opacity: 0, y: 60 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ duration: 0.6, delay: i * 0.07 }}
-                whileHover={{ y: -8 }}
-                className="group relative rounded-3xl overflow-hidden border border-amber-500/20 bg-amber-50/40 backdrop-blur-sm hover:border-amber-500/40 transition-all duration-300 flex flex-col justify-between"
-              >
-                <div>
-                  {/* Product Image Area */}
-                  <div className="aspect-square w-full relative overflow-hidden border-b border-amber-500/10">
-                    {/* Tag */}
-                    {product.tag && (
-                      <span className="absolute top-3 left-3 px-3 py-1 rounded-full bg-amber-600 text-white text-xs font-bold z-10 shadow-sm">
-                        {product.tag}
-                      </span>
-                    )}
-                    <Image
-                      src={getProductImage(product)}
-                      alt={product.name}
-                      fill
-                      sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 25vw"
-                      className="object-cover group-hover:scale-105 transition-transform duration-500"
-                    />
-                  </div>
-
-                  {/* Product Info */}
-                  <div className="p-5 text-left pb-0">
-                    <h3 className="text-amber-950 font-bold text-base mb-1 leading-snug">{product.name}</h3>
-                    
-                    {/* Description (If exists) */}
-                    {product.description && (
-                      <p className="text-xs text-amber-900/60 line-clamp-2 mb-3 h-8 leading-relaxed">
-                        {product.description}
-                      </p>
-                    )}
-
-                    {/* Rating */}
-                    <div className="flex items-center gap-1 mb-4">
-                      <Star className="w-3.5 h-3.5 fill-amber-500 text-amber-500" />
-                      <span className="text-amber-900/80 text-xs font-medium">{product.rating}</span>
-                      <span className="text-amber-800/40 text-xs">({product.reviews.toLocaleString()})</span>
-                    </div>
-
-                    {/* Weight Selection Pills */}
-                    <div className="flex gap-2 mb-4">
-                      {weightOptions.map((opt) => (
-                        <button
-                          key={opt}
-                          onClick={(e) => handleWeightSelect(product.id, opt, e)}
-                          className={`px-3 py-1 rounded-full text-xs font-semibold border transition-all ${
-                            selectedWeight === opt
-                              ? "bg-amber-600 border-amber-600 text-white shadow-sm"
-                              : "border-amber-500/20 text-amber-900/60 hover:border-amber-500/40 hover:bg-amber-50"
-                          }`}
-                        >
-                          {opt}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-
-                {/* Price and Cart Action */}
-                <div className="p-5 pt-2 text-left">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-baseline gap-2">
-                      <span className="text-xl font-bold text-amber-950">₹{price}</span>
-                      <span className="text-sm text-amber-800/40 line-through">₹{originalPrice}</span>
-                    </div>
-                    <button
-                      onClick={(e) => handleAddToCartClick(product, e)}
-                      className="w-10 h-10 rounded-full bg-amber-600/10 hover:bg-amber-600 text-amber-700 hover:text-white transition-all duration-300 flex items-center justify-center hover:scale-105"
-                    >
-                      <ShoppingCart className="w-4.5 h-4.5" />
-                    </button>
-                  </div>
-                </div>
-              </motion.div>
-            );
-          })}
+          {displayProducts.map((product, i) => (
+            <ProductCard key={product.id} product={product} index={i} />
+          ))}
         </div>
 
         <motion.div
@@ -347,12 +194,12 @@ export default function ProductShowcase() {
           transition={{ duration: 0.6, delay: 0.5 }}
           className="text-center mt-14"
         >
-          <a
-            href="#products"
+          <Link
+            href="/collection"
             className="inline-flex items-center gap-2 px-8 py-4 rounded-full border border-amber-500/50 text-amber-700 hover:bg-amber-600 hover:text-white transition-all duration-300 font-medium"
           >
             Explore Full Collection <ShoppingCart className="w-5 h-5" />
-          </a>
+          </Link>
         </motion.div>
       </div>
     </section>

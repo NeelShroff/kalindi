@@ -17,6 +17,8 @@ services:
       context: ./backend
     ports:
       - "8088:8088"
+    env_file:
+      - ./backend/.env
     environment:
       - DATABASE_URL=postgresql://kalindi_user:kalindi_password@postgres:5432/kalindi_db
       - PORT=8088
@@ -24,6 +26,7 @@ services:
       - ./backend/static/uploads:/app/static/uploads
     depends_on:
       - postgres
+
 
   frontend:
     build:

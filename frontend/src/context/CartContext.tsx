@@ -15,7 +15,7 @@ export interface CartItem {
 
 interface CartContextType {
   cartItems: CartItem[];
-  addToCart: (product: any, weight: string, price: number) => void;
+  addToCart: (product: any, weight: string, price: number, openDrawer?: boolean) => void;
   removeFromCart: (cartItemId: string) => void;
   updateQuantity: (cartItemId: string, quantity: number) => void;
   clearCart: () => void;
@@ -55,7 +55,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     }
   }, [cartItems, isLoaded]);
 
-  const addToCart = (product: any, weight: string, price: number) => {
+  const addToCart = (product: any, weight: string, price: number, openDrawer: boolean = false) => {
     const cartItemId = `${product.id}-${weight}`;
     setCartItems((prevItems) => {
       const existingItem = prevItems.find((item) => item.cart_item_id === cartItemId);
@@ -79,8 +79,10 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       };
       return [...prevItems, newItem];
     });
-    // Automatically open the cart drawer when an item is added
-    setIsCartOpen(true);
+    
+    if (openDrawer) {
+      setIsCartOpen(true);
+    }
   };
 
   const removeFromCart = (cartItemId: string) => {
