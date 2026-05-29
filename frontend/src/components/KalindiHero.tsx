@@ -186,14 +186,17 @@ function Walnut({ position, rotation, scale }: FloatingProps) {
 
 
 
-function Scene({ logoRef, onLoaded, isMobile }: { logoRef: React.RefObject<HTMLDivElement | null>; onLoaded: () => void; isMobile: boolean }) {
-  const { gl } = useThree();
-
-  useEffect(() => {
-    // Force touch-action to pan-y to allow vertical scrolling on mobile while maintaining OrbitControls
-    gl.domElement.style.touchAction = "pan-y";
-  }, [gl]);
-
+function Scene({
+  logoRef,
+  onLoaded,
+  isMobile,
+  controlDom,
+}: {
+  logoRef: React.RefObject<HTMLDivElement | null>;
+  onLoaded: () => void;
+  isMobile: boolean;
+  controlDom: HTMLDivElement | null;
+}) {
   useEffect(() => {
     // When this component mounts, Suspense has resolved and all GLTFs are loaded
     onLoaded();
@@ -252,14 +255,17 @@ function Scene({ logoRef, onLoaded, isMobile }: { logoRef: React.RefObject<HTMLD
 
       <Environment preset="city" />
 
-      <OrbitControls
-        enableZoom={false}
-        autoRotate
-        autoRotateSpeed={0.2}
-        enablePan={false}
-        maxPolarAngle={Math.PI / 3 + 0.10}
-        minPolarAngle={Math.PI / 3 - 0.10}
-      />
+      {controlDom && (
+        <OrbitControls
+          domElement={controlDom}
+          enableZoom={false}
+          autoRotate
+          autoRotateSpeed={0.2}
+          enablePan={false}
+          maxPolarAngle={Math.PI / 3 + 0.10}
+          minPolarAngle={Math.PI / 3 - 0.10}
+        />
+      )}
     </>
   );
 }
@@ -269,6 +275,7 @@ export default function KalindiHero() {
   const [isLoaded, setIsLoaded] = useState(false);
   const [mounted, setMounted] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
+  const [controlDom, setControlDom] = useState<HTMLDivElement | null>(null);
   const handleLoaded = useMemo(() => () => setIsLoaded(true), []);
 
   useEffect(() => {
@@ -298,19 +305,24 @@ export default function KalindiHero() {
   return (
     <section className="relative h-[120vh] md:h-[140vh] w-full overflow-hidden bg-transparent">
       {/* 3D Canvas wrapper to ensure absolute positioning and correct R3F size */}
-      <div className="absolute inset-0 w-full h-full z-0 touch-pan-y">
+      <div className="absolute inset-0 w-full h-full z-0 pointer-events-none">
         {mounted && (
           <Canvas
             camera={{ position: [0, 4, isMobile ? 8.5 : 6.928], fov: isMobile ? 50 : 45 }}
             gl={{ antialias: true }}
-            style={{ touchAction: 'pan-y' }}
           >
             <Suspense fallback={null}>
-              <Scene logoRef={logoRef} onLoaded={handleLoaded} isMobile={isMobile} />
+              <Scene logoRef={logoRef} onLoaded={handleLoaded} isMobile={isMobile} controlDom={controlDom} />
             </Suspense>
           </Canvas>
         )}
       </div>
+
+      {/* Invisible Touch Target for Rotating the Lotus */}
+      <div
+        ref={setControlDom}
+        className="absolute left-1/2 top-[55%] -translate-x-1/2 -translate-y-1/2 w-64 h-64 md:w-[400px] md:h-[400px] rounded-full z-20 pointer-events-auto cursor-grab active:cursor-grabbing touch-none bg-transparent"
+      />
 
       {/* Soft light vignettes */}
       <div className="absolute inset-0 bg-gradient-to-b from-white/20 via-transparent to-white/60 pointer-events-none z-10" />
@@ -346,7 +358,7 @@ export default function KalindiHero() {
           initial={{ opacity: 0, y: 20 }}
           animate={isLoaded ? { opacity: 1, y: 0 } : { opacity: 0, y: 20 }}
           transition={{ duration: 0.9, delay: 0.6, ease: "easeOut" }}
-          className="absolute bottom-28 left-1/2 -translate-x-1/2 flex flex-col sm:flex-row gap-6 items-center justify-center z-20 pointer-events-auto"
+          className="absolute bottom-28 left-1/2 -translate-x-1/2 flex flex-col sm:flex-row gap-6 items-center justify-center z-30 pointer-events-auto"
         >
           <a
             href="/collection"
