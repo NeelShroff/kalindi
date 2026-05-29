@@ -1,7 +1,7 @@
 "use client";
 
 import React, { Suspense, useMemo, useRef, useEffect, useState } from "react";
-import { Canvas, useFrame } from "@react-three/fiber";
+import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import {
   Environment,
   Float,
@@ -187,6 +187,13 @@ function Walnut({ position, rotation, scale }: FloatingProps) {
 
 
 function Scene({ logoRef, onLoaded, isMobile }: { logoRef: React.RefObject<HTMLDivElement | null>; onLoaded: () => void; isMobile: boolean }) {
+  const { gl } = useThree();
+
+  useEffect(() => {
+    // Force touch-action to pan-y to allow vertical scrolling on mobile while maintaining OrbitControls
+    gl.domElement.style.touchAction = "pan-y";
+  }, [gl]);
+
   useEffect(() => {
     // When this component mounts, Suspense has resolved and all GLTFs are loaded
     onLoaded();
@@ -291,9 +298,13 @@ export default function KalindiHero() {
   return (
     <section className="relative h-[120vh] md:h-[140vh] w-full overflow-hidden bg-transparent">
       {/* 3D Canvas wrapper to ensure absolute positioning and correct R3F size */}
-      <div className="absolute inset-0 w-full h-full z-0">
+      <div className="absolute inset-0 w-full h-full z-0 touch-pan-y">
         {mounted && (
-          <Canvas camera={{ position: [0, 4, isMobile ? 8.5 : 6.928], fov: isMobile ? 50 : 45 }} gl={{ antialias: true }}>
+          <Canvas
+            camera={{ position: [0, 4, isMobile ? 8.5 : 6.928], fov: isMobile ? 50 : 45 }}
+            gl={{ antialias: true }}
+            style={{ touchAction: 'pan-y' }}
+          >
             <Suspense fallback={null}>
               <Scene logoRef={logoRef} onLoaded={handleLoaded} isMobile={isMobile} />
             </Suspense>
