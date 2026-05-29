@@ -34,9 +34,9 @@ export default function Navbar() {
           <Image
             src="/kalindi.png"
             alt="Kalindi"
-            width={200}
-            height={60}
-            className="h-14 w-auto object-contain"
+            width={150}
+            height={40}
+            className="h-9 w-auto object-contain"
             priority
           />
         </Link>

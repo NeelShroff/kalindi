@@ -251,7 +251,7 @@ function Scene({
       <Walnut position={[isMobile ? 2.0 : 4.2, -2.2, 0.5]} rotation={[0.1, 0.6, 0.3]} scale={isMobile ? 4.5 : 8.0} />
 
       {/* Interactive Lotus below the logo in the center */}
-      <Lotus position={[0, isMobile ? -0.5 : -1, 0]} rotation={[0, 0, 0]} scale={isMobile ? 0.018 : 0.032} logoRef={logoRef} />
+      <Lotus position={[0, isMobile ? -0.5 : -1, 0]} rotation={[0, 0, 0]} scale={isMobile ? 0.024 : 0.032} logoRef={logoRef} />
 
       <Environment preset="city" />
 
@@ -321,7 +321,7 @@ export default function KalindiHero() {
       {/* Invisible Touch Target for Rotating the Lotus */}
       <div
         ref={setControlDom}
-        className="absolute left-1/2 top-[55%] -translate-x-1/2 -translate-y-1/2 w-64 h-64 md:w-[400px] md:h-[400px] rounded-full z-20 pointer-events-auto cursor-grab active:cursor-grabbing touch-none bg-transparent"
+        className="absolute left-1/2 top-[55%] -translate-x-1/2 -translate-y-1/2 w-72 h-72 md:w-[400px] md:h-[400px] rounded-full z-20 pointer-events-auto cursor-grab active:cursor-grabbing touch-none bg-transparent"
       />
 
       {/* Soft light vignettes */}
@@ -334,7 +334,7 @@ export default function KalindiHero() {
           initial={{ opacity: 0, y: -150, x: "-50%" }}
           animate={isLoaded ? { opacity: 1, y: 0, x: "-50%" } : { opacity: 0, y: -150, x: "-50%" }}
           transition={{ duration: 1.5, delay: 0.3, ease: "easeOut" }}
-          className="absolute top-28 left-1/2 w-full max-w-[420px] md:max-w-[580px] flex justify-center"
+          className="absolute top-24 left-1/2 w-full max-w-[310px] md:max-w-[580px] flex justify-center"
         >
           {/* Inner wrapper to synchronize float motion directly from the R3F loop */}
           <div
@@ -347,7 +347,7 @@ export default function KalindiHero() {
               alt="Kalindi"
               width={700}
               height={200}
-              className="w-full h-auto max-h-[190px] md:max-h-[260px] object-contain drop-shadow-[0_0_20px_rgba(255,255,255,1)]"
+              className="w-full h-auto max-h-[130px] md:max-h-[260px] object-contain drop-shadow-[0_0_20px_rgba(255,255,255,1)]"
               priority
             />
           </div>
