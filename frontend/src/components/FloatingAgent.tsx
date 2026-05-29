@@ -46,7 +46,7 @@ export default function FloatingAgent() {
         title="Open Luxury Concierge Assistance"
       >
         <img
-          src="/guest_services_icon.png"
+          src="/chatbot1.png"
           alt="Guest Assist"
           className="w-full h-full object-cover rounded-full select-none pointer-events-none"
         />
