@@ -1,14 +1,15 @@
 "use client";
 
 import { motion } from "framer-motion";
+import { Brain, Dumbbell, Heart, Moon, Sparkles, ShieldCheck } from "lucide-react";
 
 const benefits = [
-  { emoji: "🧠", name: "Brain Health", benefit: "Rich in Omega-3 and antioxidants for cognitive function." },
-  { emoji: "💪", name: "Strength & Energy", benefit: "Packed with proteins and healthy fats for sustained energy." },
-  { emoji: "❤️", name: "Heart Health", benefit: "Reduces bad cholesterol and supports cardiovascular health." },
-  { emoji: "🌙", name: "Better Sleep", benefit: "Natural magnesium and melatonin precursors in walnuts & almonds." },
-  { emoji: "✨", name: "Skin Glow", benefit: "Vitamin E and healthy fats for radiant, youthful skin." },
-  { emoji: "🛡️", name: "Immunity Boost", benefit: "Zinc, selenium, and antioxidants strengthen your immune system." },
+  { Icon: Brain, name: "Brain Health", benefit: "Rich in Omega-3 and antioxidants for cognitive function." },
+  { Icon: Dumbbell, name: "Strength & Energy", benefit: "Packed with proteins and healthy fats for sustained energy." },
+  { Icon: Heart, name: "Heart Health", benefit: "Reduces bad cholesterol and supports cardiovascular health." },
+  { Icon: Moon, name: "Better Sleep", benefit: "Natural magnesium and melatonin precursors in walnuts & almonds." },
+  { Icon: Sparkles, name: "Skin Glow", benefit: "Vitamin E and healthy fats for radiant, youthful skin." },
+  { Icon: ShieldCheck, name: "Immunity Boost", benefit: "Zinc, selenium, and antioxidants strengthen your immune system." },
 ];
 
 export default function HealthBenefits() {
@@ -56,7 +57,9 @@ export default function HealthBenefits() {
                 transition={{ duration: 0.5, delay: i * 0.08 }}
                 className="p-5 rounded-2xl border border-kalindi-purple/20 bg-kalindi-purple/5 hover:border-[#e91e8c]/30 transition-all duration-300 text-left"
               >
-                <div className="text-3xl mb-3">{b.emoji}</div>
+                <div className="mb-3 w-10 h-10 rounded-xl bg-[#e91e8c]/10 flex items-center justify-center">
+                <b.Icon className="w-5 h-5 text-[#e91e8c]" />
+              </div>
                 <h4 className="text-kalindi-purple font-semibold mb-1">{b.name}</h4>
                 <p className="text-[#0f1a34]/70 text-sm leading-relaxed">{b.benefit}</p>
               </motion.div>

@@ -7,16 +7,19 @@ services:
       POSTGRES_USER: kalindi_user
       POSTGRES_PASSWORD: kalindi_password
       POSTGRES_DB: kalindi_db
-    ports:
-      - "5432:5432"
+    # ports:
+    #   # Expose only to host loopback interface (security best practice)
+    #   - "127.0.0.1:5432:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
+    restart: always
 
   backend:
     build:
       context: ./backend
     ports:
-      - "8088:8088"
+      # Expose only to host loopback interface
+      - "127.0.0.1:8088:8088"
     env_file:
       - ./backend/.env
     environment:
@@ -26,17 +29,41 @@ services:
       - ./backend/static/uploads:/app/static/uploads
     depends_on:
       - postgres
-
+    restart: always
 
   frontend:
     build:
       context: ./frontend
+      args:
+        - NEXT_PUBLIC_API_URL=${API_URL}
+        - NEXT_PUBLIC_RAZORPAY_KEY_ID=${RAZORPAY_KEY_ID}
+        - NEXT_PUBLIC_GOOGLE_CLIENT_ID=${NEXT_PUBLIC_GOOGLE_CLIENT_ID}
     ports:
-      - "3000:3000"
+      # Expose only to host loopback interface
+      - "127.0.0.1:3000:3000"
     environment:
-      - NEXT_PUBLIC_API_URL=http://localhost:8088
+      - NEXT_PUBLIC_API_URL=${API_URL}
+      - NEXT_PUBLIC_RAZORPAY_KEY_ID=${RAZORPAY_KEY_ID}
+      - NEXT_PUBLIC_GOOGLE_CLIENT_ID=${NEXT_PUBLIC_GOOGLE_CLIENT_ID}
     depends_on:
       - backend
+    restart: always
+
+  nginx:
+    image: nginx:alpine
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+      # Mount host's Let's Encrypt folder directly for easy SSL sharing
+      - /etc/letsencrypt:/etc/letsencrypt:ro
+    depends_on:
+      - frontend
+      - backend
+    restart: always
 
 volumes:
   pgdata:
+
+

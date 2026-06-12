@@ -1,14 +1,19 @@
+"use client";
+
+import dynamic from "next/dynamic";
 import Navbar from "@/components/Navbar";
 import KalindiHero from "@/components/KalindiHero";
-import ProductShowcase from "@/components/sections/ProductShowcase";
-import WhyKalindi from "@/components/sections/WhyKalindi";
-import HealthBenefits from "@/components/sections/HealthBenefits";
-import GiftCollections from "@/components/sections/GiftCollections";
-import PackagingExperience from "@/components/sections/PackagingExperience";
-import Testimonials from "@/components/sections/Testimonials";
-import BrandStory from "@/components/sections/BrandStory";
-import FAQ from "@/components/sections/FAQ";
-import Footer from "@/components/sections/Footer";
+
+// Dynamically import non-critical sections to speed up initial page load
+const ProductShowcase = dynamic(() => import("@/components/sections/ProductShowcase"), { ssr: false });
+const WhyKalindi = dynamic(() => import("@/components/sections/WhyKalindi"), { ssr: false });
+const HealthBenefits = dynamic(() => import("@/components/sections/HealthBenefits"), { ssr: false });
+const GiftCollections = dynamic(() => import("@/components/sections/GiftCollections"), { ssr: false });
+const PackagingExperience = dynamic(() => import("@/components/sections/PackagingExperience"), { ssr: false });
+const Testimonials = dynamic(() => import("@/components/sections/Testimonials"), { ssr: false });
+const BrandStory = dynamic(() => import("@/components/sections/BrandStory"), { ssr: false });
+const FAQ = dynamic(() => import("@/components/sections/FAQ"), { ssr: false });
+const Footer = dynamic(() => import("@/components/sections/Footer"), { ssr: false });
 
 export default function Home() {
   return (

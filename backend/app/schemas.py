@@ -87,6 +87,9 @@ class OrderResponse(OrderBase):
     status: str
     created_at: datetime
     items: List[OrderItemResponse]
+    razorpay_order_id: Optional[str] = None
+    razorpay_payment_id: Optional[str] = None
+    razorpay_signature: Optional[str] = None
 
     class Config:
         from_attributes = True
@@ -104,6 +107,8 @@ class UserResponse(BaseModel):
     email: str
     name: Optional[str] = None
     picture: Optional[str] = None
+    phone: Optional[str] = None
+    address: Optional[str] = None
     created_at: datetime
 
     class Config:
@@ -163,5 +168,27 @@ class UserMemoryResponse(BaseModel):
 
     class Config:
         from_attributes = True
+
+
+class SendOtpRequest(BaseModel):
+    email: str
+
+
+class VerifyOtpRequest(BaseModel):
+    email: str
+    code: str
+    name: Optional[str] = None
+    password: Optional[str] = None
+
+
+class CheckEmailRequest(BaseModel):
+    email: str
+
+
+class LoginWithPasswordRequest(BaseModel):
+    email: str
+    password: str
+
+
 
 

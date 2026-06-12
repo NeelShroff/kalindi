@@ -29,6 +29,9 @@ class Order(Base):
     shipping_address = Column(String, nullable=False)
     total_amount = Column(Float, nullable=False)
     status = Column(String, default="pending")  # pending, processing, shipped, completed, cancelled
+    razorpay_order_id = Column(String, nullable=True)
+    razorpay_payment_id = Column(String, nullable=True)
+    razorpay_signature = Column(String, nullable=True)
     created_at = Column(DateTime, default=datetime.datetime.utcnow)
 
     items = relationship("OrderItem", back_populates="order", cascade="all, delete-orphan")
@@ -55,6 +58,9 @@ class User(Base):
     name = Column(String, nullable=True)
     picture = Column(String, nullable=True)
     google_id = Column(String, unique=True, index=True, nullable=True)
+    phone = Column(String, nullable=True)
+    address = Column(String, nullable=True)
+    hashed_password = Column(String, nullable=True)
     created_at = Column(DateTime, default=datetime.datetime.utcnow)
 
     sessions = relationship("ChatSession", back_populates="user", cascade="all, delete-orphan")

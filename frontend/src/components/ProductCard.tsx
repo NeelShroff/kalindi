@@ -1,8 +1,9 @@
 "use client";
 
-import { useState } from "react";
-import { motion } from "framer-motion";
-import { ShoppingCart, Star, Plus, Minus } from "lucide-react";
+import { useState, useEffect } from "react";
+import { createPortal } from "react-dom";
+import { motion, AnimatePresence } from "framer-motion";
+import { ShoppingCart, Star, Plus, Minus, X, Check, Info, ShieldAlert } from "lucide-react";
 import Image from "next/image";
 import { useCart } from "@/context/CartContext";
 
@@ -28,6 +29,54 @@ interface ProductCardProps {
 export default function ProductCard({ product, index }: ProductCardProps) {
   const { cartItems, addToCart, removeFromCart, updateQuantity } = useCart();
   
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [mounted, setMounted] = useState(false);
+  const [aiDetails, setAiDetails] = useState<{
+    benefits?: string[];
+    specifications?: Record<string, string>;
+  } | null>(null);
+  const [isLoadingAi, setIsLoadingAi] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+    return () => setMounted(false);
+  }, []);
+
+  // Prevent body scrolling when Product Modal is open
+  useEffect(() => {
+    if (isModalOpen) {
+      document.body.style.overflow = "hidden";
+    } else {
+      document.body.style.overflow = "";
+    }
+    return () => {
+      document.body.style.overflow = "";
+    };
+  }, [isModalOpen]);
+
+  useEffect(() => {
+    if (isModalOpen && !aiDetails) {
+      async function fetchAiDetails() {
+        setIsLoadingAi(true);
+        try {
+          const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8088";
+          const res = await fetch(`${apiUrl}/api/products/${product.id}/ai-details`);
+          if (res.ok) {
+            const data = await res.json();
+            if (data && (data.benefits || data.specifications)) {
+              setAiDetails(data);
+            }
+          }
+        } catch (err) {
+          console.warn("Failed to fetch AI details from Groq. Falling back to local catalog rules.", err);
+        } finally {
+          setIsLoadingAi(false);
+        }
+      }
+      fetchAiDetails();
+    }
+  }, [isModalOpen, product.id, aiDetails]);
+
   // Local state for weight selection
   const [selectedWeight, setSelectedWeight] = useState<string>(() => {
     if (product.price_500g !== null) return "500g";
@@ -46,14 +95,97 @@ export default function ProductCard({ product, index }: ProductCardProps) {
 
   const getFallbackImage = (productName: string) => {
     const lower = productName.toLowerCase();
-    if (lower.includes("almond")) return "/almonds.png";
-    if (lower.includes("pistachio")) return "/pistachios.png";
-    if (lower.includes("cashew")) return "/cashews.png";
-    if (lower.includes("date")) return "/dates.png";
-    if (lower.includes("fig")) return "/figs.png";
-    if (lower.includes("raisin")) return "/raisins.png";
-    if (lower.includes("makhana") || lower.includes("fox")) return "/makhana.png";
-    return "/giftbox.png";
+    if (lower.includes("almond")) return "/almonds.webp";
+    if (lower.includes("pistachio")) return "/pistachios.webp";
+    if (lower.includes("cashew")) return "/cashews.webp";
+    if (lower.includes("date")) return "/dates.webp";
+    if (lower.includes("fig")) return "/figs.webp";
+    if (lower.includes("raisin")) return "/raisins.webp";
+    if (lower.includes("makhana") || lower.includes("fox")) return "/makhana.webp";
+    return "/giftbox.webp";
+  };
+
+  const getProductBenefits = (productName: string) => {
+    const lower = productName.toLowerCase();
+    if (
+      lower.includes("almond") ||
+      lower.includes("cashew") ||
+      lower.includes("walnut") ||
+      lower.includes("pistachio") ||
+      lower.includes("makhana") ||
+      lower.includes("nut")
+    ) {
+      return [
+        "100% natural and raw",
+        "High in dietary fiber",
+        "Rich source of protein & iron",
+        "No preservatives, no chemicals"
+      ];
+    }
+    if (
+      lower.includes("date") ||
+      lower.includes("fig") ||
+      lower.includes("raisin") ||
+      lower.includes("fruit") ||
+      lower.includes("berry")
+    ) {
+      return [
+        "100% natural energy booster",
+        "Rich in natural antioxidants",
+        "High in essential vitamins & minerals",
+        "No added sugar or preservatives"
+      ];
+    }
+    if (
+      lower.includes("box") ||
+      lower.includes("gift") ||
+      lower.includes("pack") ||
+      lower.includes("collection") ||
+      lower.includes("assort")
+    ) {
+      return [
+        "Premium luxury packaging",
+        "Perfect gift for health & wellness",
+        "Assorted handpicked selection",
+        "Hygienically vacuum sealed"
+      ];
+    }
+    return [
+      "100% natural and pure",
+      "Rich source of daily nutrients",
+      "Quality tested & hand-selected",
+      "No preservatives, no chemicals"
+    ];
+  };
+
+  const getDisplaySpecifications = () => {
+    const specs: { name: string; value: string }[] = [
+      { name: "Brand", value: "Kalindi Heritage" }
+    ];
+
+    if (aiDetails?.specifications) {
+      Object.entries(aiDetails.specifications).forEach(([key, val]) => {
+        if (key !== "Hygienic Packaging") {
+          specs.push({ name: key, value: val });
+        }
+      });
+    } else {
+      const lowerName = product.name.toLowerCase();
+      let allergen = "Contains Tree Nuts";
+      if (lowerName.includes("date") || lowerName.includes("fig") || lowerName.includes("raisin") || lowerName.includes("fruit")) {
+        allergen = "Naturally Gluten Free, Vegan Friendly";
+      } else if (lowerName.includes("makhana") || lowerName.includes("fox")) {
+        allergen = "Gluten Free, Vegan Friendly";
+      } else if (lowerName.includes("box") || lowerName.includes("gift")) {
+        allergen = "May contain tree nuts (Assorted Selection)";
+      }
+
+      specs.push(
+        { name: "Allergen Information", value: allergen },
+        { name: "Storage Instructions", value: "Store in cool, dry place in airtight container" }
+      );
+    }
+    return specs;
   };
 
   const getProductImage = (p: Product) => {
@@ -111,102 +243,316 @@ export default function ProductCard({ product, index }: ProductCardProps) {
     }
   };
 
-  return (
-    <motion.div
-      initial={{ opacity: 0, y: 60 }}
-      whileInView={{ opacity: 1, y: 0 }}
-      viewport={{ once: true }}
-      transition={{ duration: 0.6, delay: index * 0.07 }}
-      whileHover={{ y: -8 }}
-      className="group relative rounded-3xl overflow-hidden border border-amber-500/20 bg-amber-50/40 backdrop-blur-sm hover:border-amber-500/40 transition-all duration-300 flex flex-col justify-between"
-    >
-      <div>
-        {/* Product Image Area */}
-        <div className="aspect-square w-full relative overflow-hidden border-b border-amber-500/10">
-          {product.tag && (
-            <span className="absolute top-3 left-3 px-3 py-1 rounded-full bg-amber-600 text-white text-xs font-bold z-10 shadow-sm">
-              {product.tag}
-            </span>
-          )}
-          <Image
-            src={getProductImage(product)}
-            alt={product.name}
-            fill
-            sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 25vw"
-            className="object-cover group-hover:scale-105 transition-transform duration-500"
+  const modalContent = (
+    <AnimatePresence>
+      {isModalOpen && (
+        <div data-lenis-prevent className="fixed inset-0 z-[100] flex items-center justify-center p-4 md:p-6 overflow-hidden">
+          {/* Backdrop */}
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={(e) => {
+              e.stopPropagation();
+              setIsModalOpen(false);
+            }}
+            className="absolute inset-0 bg-black/75 backdrop-blur-md cursor-pointer"
           />
-        </div>
 
-        {/* Product Info */}
-        <div className="p-5 text-left pb-0">
-          <h3 className="text-amber-950 font-bold text-base mb-1 leading-snug">{product.name}</h3>
-          
-          {product.description && (
-            <p className="text-xs text-amber-900/60 line-clamp-2 mb-3 h-8 leading-relaxed">
-              {product.description}
-            </p>
-          )}
-
-          <div className="flex items-center gap-1 mb-4">
-            <Star className="w-3.5 h-3.5 fill-amber-500 text-amber-500" />
-            <span className="text-amber-900/80 text-xs font-medium">{product.rating}</span>
-            <span className="text-amber-800/40 text-xs">({product.reviews.toLocaleString()})</span>
-          </div>
-
-          <div className="flex gap-2 mb-4">
-            {weightOptions.map((opt) => (
-              <button
-                key={opt}
-                onClick={(e) => handleWeightSelect(opt, e)}
-                className={`px-3 py-1 rounded-full text-xs font-semibold border transition-all ${
-                  selectedWeight === opt
-                    ? "bg-amber-600 border-amber-600 text-white shadow-sm"
-                    : "border-amber-500/20 text-amber-900/60 hover:border-amber-500/40 hover:bg-amber-50"
-                }`}
-              >
-                {opt}
-              </button>
-            ))}
-          </div>
-        </div>
-      </div>
-
-      {/* Price and Cart Action */}
-      <div className="p-5 pt-2 text-left">
-        <div className="flex items-center justify-between">
-          <div className="flex items-baseline gap-2">
-            <span className="text-xl font-bold text-amber-950">₹{price}</span>
-            <span className="text-sm text-amber-800/40 line-through">₹{originalPrice}</span>
-          </div>
-          
-          {currentQuantity === 0 ? (
+          {/* Modal Container */}
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95, y: 20 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.95, y: 20 }}
+            transition={{ type: "spring", duration: 0.5 }}
+            onClick={(e) => e.stopPropagation()}
+            className="relative w-full max-w-4xl bg-[#0f0717]/95 border border-purple-500/20 backdrop-blur-2xl rounded-3xl shadow-2xl overflow-hidden text-white max-h-[90vh] flex flex-col z-10"
+          >
+            {/* Close Button */}
             <button
-              onClick={handleAddToCart}
-              className="w-10 h-10 rounded-full bg-amber-600/10 hover:bg-amber-600 text-amber-700 hover:text-white transition-all duration-300 flex items-center justify-center hover:scale-105"
+              onClick={(e) => {
+                e.stopPropagation();
+                setIsModalOpen(false);
+              }}
+              className="absolute top-5 right-5 z-50 p-2.5 rounded-full bg-white/5 hover:bg-white/10 text-white/70 hover:text-white transition-colors cursor-pointer"
             >
-              <ShoppingCart className="w-4.5 h-4.5" />
+              <X className="w-5 h-5" />
             </button>
-          ) : (
-            <div className="flex items-center bg-amber-600/10 rounded-full border border-amber-600/20">
-              <button 
-                onClick={handleDecrement}
-                className="w-8 h-8 flex items-center justify-center text-amber-700 hover:bg-amber-600 hover:text-white rounded-full transition-colors"
-              >
-                <Minus className="w-4 h-4" />
-              </button>
-              <span className="w-6 text-center text-sm font-semibold text-amber-900">
-                {currentQuantity}
-              </span>
-              <button 
-                onClick={handleIncrement}
-                className="w-8 h-8 flex items-center justify-center text-amber-700 hover:bg-amber-600 hover:text-white rounded-full transition-colors"
-              >
-                <Plus className="w-4 h-4" />
-              </button>
+
+            {/* Scrollable Content */}
+            <div className="overflow-y-auto p-6 md:p-10">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-8 md:gap-12 items-start">
+                
+                {/* Left Column: Product Image & Technical Details (Sticky) */}
+                <div className="md:sticky md:top-0 space-y-6">
+                  <div className="aspect-square w-full relative overflow-hidden rounded-2xl bg-white/5 border border-white/5 shadow-inner">
+                    {product.tag && (
+                      <span className="absolute top-4 left-4 px-3.5 py-1.5 rounded-full bg-gradient-to-r from-[#e91e8c] to-[#be185d] text-white text-xs font-bold z-10 shadow-md">
+                        {product.tag}
+                      </span>
+                    )}
+                    <Image
+                      src={getProductImage(product)}
+                      alt={product.name}
+                      fill
+                      sizes="(max-width: 768px) 100vw, 55vw"
+                      className="object-cover"
+                      priority
+                    />
+                  </div>
+                  
+                  {/* Trust Badges */}
+                  <div className="grid grid-cols-3 gap-3">
+                    {[
+                      { icon: ShieldAlert, t: "Pure & Organic" },
+                      { icon: Star, t: "Premium Quality" },
+                      { icon: Info, t: "Hygienically Packed" }
+                    ].map((badge, idx) => (
+                      <div key={idx} className="p-3 rounded-xl bg-white/[0.02] border border-white/5 flex flex-col items-center text-center space-y-1.5">
+                        <badge.icon className="w-5 h-5 text-[#D4AF37]" />
+                        <span className="text-[10px] text-white/60 font-semibold tracking-wider uppercase leading-tight">{badge.t}</span>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Detailed Specifications Table (Moved to Left Column to balance empty space) */}
+                  <div className="space-y-3 pt-2">
+                    <label className="text-xs font-bold text-white/70 uppercase tracking-widest block">Product Specifications</label>
+                    <div className="border border-white/10 rounded-2xl overflow-hidden bg-white/[0.01]">
+                      <table className="w-full text-xs text-left">
+                        <tbody>
+                          {getDisplaySpecifications().map((row, idx, arr) => (
+                            <tr key={idx} className={idx !== arr.length - 1 ? "border-b border-white/5" : ""}>
+                              <td className="p-3 text-white/40 font-semibold w-1/3 bg-white/[0.01]">{row.name}</td>
+                              <td className="p-3 text-white/80">{row.value}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Right Column: Details & Actions */}
+                <div className="text-left space-y-6">
+                  <div>
+                    <span className="text-xs font-bold tracking-widest text-[#e91e8c] uppercase">Kalindi Heritage</span>
+                    <h2 className="text-2xl md:text-3xl font-black tracking-wide text-white mt-1 leading-snug">{product.name}</h2>
+                    
+                    {/* Rating & Reviews */}
+                    <div className="flex items-center gap-1.5 mt-3">
+                      <div className="flex gap-0.5">
+                        {[1, 2, 3, 4, 5].map((s) => (
+                          <Star key={s} className="w-4 h-4 fill-amber-500 text-amber-500" />
+                        ))}
+                      </div>
+                      <span className="text-sm font-semibold text-white/80">{product.rating}</span>
+                      <span className="text-white/40 text-xs">({product.reviews.toLocaleString()} reviews)</span>
+                    </div>
+                  </div>
+
+                  <div className="h-px bg-white/10" />
+
+                  {/* Price Block */}
+                  <div className="space-y-1">
+                    <div className="flex items-baseline gap-3">
+                      <span className="text-3xl font-black text-[#D4AF37]">₹{price}</span>
+                      <span className="text-base text-white/40 line-through">₹{originalPrice}</span>
+                      <span className="text-xs font-bold text-emerald-400 bg-emerald-500/10 px-2.5 py-1 rounded-full uppercase tracking-wider">Save 30%</span>
+                    </div>
+                    <p className="text-[11px] text-white/40">Inclusive of all taxes. Free shipping on orders above ₹499.</p>
+                  </div>
+
+                  {/* Weight Options */}
+                  <div className="space-y-2.5">
+                    <label className="text-xs font-bold text-white/70 uppercase tracking-widest block">Select Package Weight</label>
+                    <div className="flex gap-3">
+                      {weightOptions.map((opt) => (
+                        <button
+                          key={opt}
+                          onClick={(e) => handleWeightSelect(opt, e)}
+                          className={`px-4 py-2.5 rounded-xl text-sm font-bold border transition-all flex items-center justify-center cursor-pointer ${
+                            selectedWeight === opt
+                              ? "bg-gradient-to-r from-[#e91e8c] to-[#be185d] border-transparent text-white shadow-md scale-[1.03]"
+                              : "border-white/10 text-white/60 hover:border-white/20 hover:bg-white/5"
+                          }`}
+                        >
+                          {opt}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Product Description */}
+                  {product.description && (
+                    <div className="space-y-2">
+                      <label className="text-xs font-bold text-white/70 uppercase tracking-widest block">Product Details</label>
+                      <p className="text-sm text-white/70 leading-relaxed font-light">{product.description}</p>
+                    </div>
+                  )}
+
+                  {/* Key Highlights */}
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <label className="text-xs font-bold text-white/70 uppercase tracking-widest block">Key Benefits</label>
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 text-xs text-white/80 font-medium">
+                      {(aiDetails?.benefits || getProductBenefits(product.name)).map((benefit, idx) => (
+                        <div key={idx} className="flex items-center gap-2">
+                          <Check className="w-4 h-4 text-emerald-400 flex-shrink-0" />
+                          <span>{benefit}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="h-px bg-white/10" />
+
+                  {/* Quantity and Cart Controls */}
+                  <div className="flex flex-col sm:flex-row gap-4 items-center pt-2">
+                    {currentQuantity > 0 && (
+                      <div className="flex items-center bg-white/5 border border-white/10 rounded-xl p-1 w-full sm:w-auto justify-between">
+                        <button
+                          onClick={handleDecrement}
+                          className="w-10 h-10 rounded-lg flex items-center justify-center hover:bg-white/10 text-white/70 hover:text-white transition-colors cursor-pointer"
+                        >
+                          <Minus className="w-4 h-4" />
+                        </button>
+                        <span className="w-12 text-center text-sm font-bold text-white">
+                          {currentQuantity}
+                        </span>
+                        <button
+                          onClick={handleIncrement}
+                          className="w-10 h-10 rounded-lg flex items-center justify-center hover:bg-white/10 text-white/70 hover:text-white transition-colors cursor-pointer"
+                        >
+                          <Plus className="w-4 h-4" />
+                        </button>
+                      </div>
+                    )}
+                    
+                    <button
+                      onClick={handleAddToCart}
+                      className={`w-full py-4 rounded-xl font-bold flex items-center justify-center gap-2 hover:shadow-[0_0_20px_rgba(233,30,140,0.4)] transition-all cursor-pointer ${
+                        currentQuantity > 0
+                          ? "bg-transparent border border-[#e91e8c] text-[#e91e8c] hover:bg-[#e91e8c]/10"
+                          : "bg-gradient-to-r from-[#e91e8c] to-[#be185d] text-white"
+                      }`}
+                    >
+                      <ShoppingCart className="w-5 h-5" />
+                      {currentQuantity > 0 ? "Add More to Cart" : "Add to Cart"}
+                    </button>
+                  </div>
+
+                </div>
+              </div>
             </div>
-          )}
+
+          </motion.div>
         </div>
-      </div>
-    </motion.div>
+      )}
+    </AnimatePresence>
+  );
+
+  return (
+    <>
+      <motion.div
+        initial={{ opacity: 0, y: 60 }}
+        whileInView={{ opacity: 1, y: 0 }}
+        viewport={{ once: true }}
+        transition={{ duration: 0.6, delay: index * 0.07 }}
+        whileHover={{ y: -8 }}
+        onClick={() => setIsModalOpen(true)}
+        className="group relative rounded-3xl overflow-hidden border border-amber-500/20 bg-amber-50/40 backdrop-blur-sm hover:border-amber-500/40 transition-all duration-300 flex flex-col justify-between cursor-pointer"
+      >
+        <div>
+          {/* Product Image Area */}
+          <div className="aspect-square w-full relative overflow-hidden border-b border-amber-500/10">
+            {product.tag && (
+              <span className="absolute top-3 left-3 px-3 py-1 rounded-full bg-amber-600 text-white text-xs font-bold z-10 shadow-sm">
+                {product.tag}
+              </span>
+            )}
+            <Image
+              src={getProductImage(product)}
+              alt={product.name}
+              fill
+              sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 25vw"
+              className="object-cover group-hover:scale-105 transition-transform duration-500"
+            />
+          </div>
+
+          {/* Product Info */}
+          <div className="p-5 text-left pb-0">
+            <h3 className="text-amber-950 font-bold text-base mb-1 leading-snug">{product.name}</h3>
+            
+            {product.description && (
+              <p className="text-xs text-amber-900/60 line-clamp-2 mb-3 h-8 leading-relaxed">
+                {product.description}
+              </p>
+            )}
+
+            <div className="flex items-center gap-1 mb-4">
+              <Star className="w-3.5 h-3.5 fill-amber-500 text-amber-500" />
+              <span className="text-amber-900/80 text-xs font-medium">{product.rating}</span>
+              <span className="text-amber-800/40 text-xs">({product.reviews.toLocaleString()})</span>
+            </div>
+
+            <div className="flex gap-2 mb-4">
+              {weightOptions.map((opt) => (
+                <button
+                  key={opt}
+                  onClick={(e) => handleWeightSelect(opt, e)}
+                  className={`px-3 py-1 rounded-full text-xs font-semibold border transition-all ${
+                    selectedWeight === opt
+                      ? "bg-amber-600 border-amber-600 text-white shadow-sm"
+                      : "border-amber-500/20 text-amber-900/60 hover:border-amber-500/40 hover:bg-amber-50"
+                  }`}
+                >
+                  {opt}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* Price and Cart Action */}
+        <div className="p-5 pt-2 text-left">
+          <div className="flex items-center justify-between">
+            <div className="flex items-baseline gap-2">
+              <span className="text-xl font-bold text-amber-950">₹{price}</span>
+              <span className="text-sm text-amber-800/40 line-through">₹{originalPrice}</span>
+            </div>
+            
+            {currentQuantity === 0 ? (
+              <button
+                onClick={handleAddToCart}
+                className="w-10 h-10 rounded-full bg-amber-600/10 hover:bg-amber-600 text-amber-700 hover:text-white transition-all duration-300 flex items-center justify-center hover:scale-105"
+              >
+                <ShoppingCart className="w-4.5 h-4.5" />
+              </button>
+            ) : (
+              <div className="flex items-center bg-amber-600/10 rounded-full border border-amber-600/20">
+                <button 
+                  onClick={handleDecrement}
+                  className="w-8 h-8 flex items-center justify-center text-amber-700 hover:bg-amber-600 hover:text-white rounded-full transition-colors"
+                >
+                  <Minus className="w-4 h-4" />
+                </button>
+                <span className="w-6 text-center text-sm font-semibold text-amber-900">
+                  {currentQuantity}
+                </span>
+                <button 
+                  onClick={handleIncrement}
+                  className="w-8 h-8 flex items-center justify-center text-amber-700 hover:bg-amber-600 hover:text-white rounded-full transition-colors"
+                >
+                  <Plus className="w-4 h-4" />
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+      </motion.div>
+      {mounted && createPortal(modalContent, document.body)}
+    </>
   );
 }

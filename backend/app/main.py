@@ -10,6 +10,37 @@ from .config import settings
 # Create database tables
 Base.metadata.create_all(bind=engine)
 
+# Self-healing migration to add missing columns to users table if they don't exist
+from sqlalchemy import text
+db = SessionLocal()
+try:
+    if engine.name == "postgresql":
+        db.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS hashed_password VARCHAR"))
+        db.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS phone VARCHAR"))
+        db.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS address VARCHAR"))
+        db.commit()
+    else:
+        # SQLite migrations for each missing column
+        try:
+            db.execute(text("ALTER TABLE users ADD COLUMN hashed_password TEXT"))
+            db.commit()
+        except Exception:
+            pass
+        try:
+            db.execute(text("ALTER TABLE users ADD COLUMN phone TEXT"))
+            db.commit()
+        except Exception:
+            pass
+        try:
+            db.execute(text("ALTER TABLE users ADD COLUMN address TEXT"))
+            db.commit()
+        except Exception:
+            pass
+except Exception as e:
+    print(f"Error checking/adding column: {e}")
+finally:
+    db.close()
+
 app = FastAPI(title="Kalindi Luxury API", version="1.0.0")
 
 # Setup CORS middleware

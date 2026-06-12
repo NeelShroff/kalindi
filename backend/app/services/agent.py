@@ -49,6 +49,13 @@ RULES & BEHAVIOR:
    - If the user asks to "reorder", "add my last order to cart", or "add items from my previous order", check if the user is logged in (indicated by USER AUTHENTICATION STATUS context being present).
    - If they are logged in, confirm that you are adding the items from their last order, and append `[ADD_LAST_ORDER_TO_CART]` on a new line.
    - If they are NOT logged in, tell them they must first log in using the sidebar to retrieve their order history and automatically reorder.
+
+6. DIRECT ADD TO CART:
+   - If the user explicitly asks you to add a product to their cart (e.g., "add almonds to my cart", "add 500g pistachios to my cart"), identify the product ID, the requested weight (default to 250g if unspecified), and the price from the catalog.
+   - Confirm that you are adding the item, and append `[ADD_TO_CART: <id>, weight: <weight>, price: <price>]` on a new line at the very end of your response.
+   - Example:
+     "I have added 500g of Saffron Pistachios to your cart.
+     [ADD_TO_CART: 2, weight: 500g, price: 699]"
 """
 
 def get_product_catalog_string(db: Session) -> str:
@@ -76,6 +83,70 @@ def get_product_catalog_string(db: Session) -> str:
 def run_local_fallback_agent(query: str, db: Session, user_id: int = None) -> str:
     """Wrapper that resolves user memory and prepends it to the fallback agent response."""
     query_lower = query.lower()
+    
+    # Check for direct add to cart intent in local fallback mode
+    if "add" in query_lower and ("cart" in query_lower or "order" in query_lower or "bag" in query_lower):
+        productId = None
+        name = ""
+        weight = "250g"
+        price = 0
+        
+        # Check weight in query
+        if "500g" in query_lower or "500 g" in query_lower:
+            weight = "500g"
+        elif "1kg" in query_lower or "1 kg" in query_lower or "1000g" in query_lower or "1000 g" in query_lower or "1-kg" in query_lower:
+            weight = "1kg"
+            
+        if "almond" in query_lower or "badam" in query_lower:
+            productId = 1
+            name = "Premium California Almonds"
+            prices = {"250g": 279, "500g": 499, "1kg": 949}
+            price = prices.get(weight, 279)
+        elif "pistachio" in query_lower or "pista" in query_lower:
+            productId = 2
+            name = "Saffron Pistachios"
+            prices = {"250g": 399, "500g": 699, "1kg": 1299}
+            price = prices.get(weight, 399)
+        elif "cashew" in query_lower or "kaju" in query_lower:
+            productId = 3
+            name = "Royal Cashews W320"
+            prices = {"250g": 299, "500g": 549, "1kg": 999}
+            price = prices.get(weight, 299)
+        elif "date" in query_lower or "khajur" in query_lower:
+            productId = 4
+            name = "Medjool Dates"
+            prices = {"250g": 289, "500g": 449, "1kg": 849}
+            price = prices.get(weight, 289)
+        elif "fig" in query_lower or "anjeer" in query_lower:
+            productId = 5
+            name = "Turkish Figs"
+            prices = {"250g": 379, "500g": 699, "1kg": 1299}
+            price = prices.get(weight, 379)
+        elif "raisin" in query_lower or "kismis" in query_lower:
+            productId = 6
+            name = "Jumbo Raisins"
+            prices = {"250g": 169, "500g": 299, "1kg": 549}
+            price = prices.get(weight, 169)
+        elif "fox" in query_lower or "makhana" in query_lower:
+            productId = 7
+            name = "Fox Nuts (Makhana)"
+            if weight == "1kg":
+                weight = "500g"
+            prices = {"250g": 249, "500g": 449}
+            price = prices.get(weight, 249)
+        elif "gift" in query_lower or "box" in query_lower or "hamper" in query_lower:
+            productId = 8
+            name = "Kalindi Assorted Gift Box"
+            weight = "1kg"
+            price = 1299
+
+        if productId:
+            return f"""### Adding {name} to Your Cart
+I have added the **{name}** ({weight}) to your cart. 
+
+You may continue browsing or view your cart in the drawer.
+[ADD_TO_CART: {productId}, weight: {weight}, price: {price}]"""
+
     if any(x in query_lower for x in ["reorder", "last order", "previous order", "add last", "add previous"]):
         if user_id:
             from ..models import User, Order
@@ -482,3 +553,61 @@ async def generate_chat_stream_response(messages: list, db: Session, user_id: in
             chunk = fallback_text[i:i+chunk_size]
             yield f"data: {json.dumps({'content': chunk})}\n\n"
             await asyncio.sleep(0.02)
+
+async def generate_product_details(product_name: str, product_description: str) -> dict:
+    """Use Groq to generate dynamic key benefits and specifications for a product."""
+    api_key = settings.GROQ_API_KEY
+    if not api_key:
+        return {}
+        
+    prompt = f"""
+    You are an expert food scientist and copywriter for Kalindi, a luxury dry fruit and wellness brand.
+    Generate a JSON object containing key benefits and detailed specifications for the following product:
+    Product Name: {product_name}
+    Description: {product_description}
+    
+    The JSON object must match this exact structure:
+    {{
+      "benefits": [
+        "Benefit 1 (short, max 6 words)",
+        "Benefit 2 (short, max 6 words)",
+        "Benefit 3 (short, max 6 words)",
+        "Benefit 4 (short, max 6 words)"
+      ],
+      "specifications": {{
+        "Allergen Information": "e.g. Contains Tree Nuts / Gluten Free / etc.",
+        "Storage Instructions": "e.g. Store in cool, dry place in airtight container"
+      }}
+    }}
+    
+    Return ONLY valid, parseable JSON. No conversational wrapper, no markdown blocks.
+    """
+    
+    try:
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            response = await client.post(
+                "https://api.groq.com/openai/v1/chat/completions",
+                headers={
+                    "Authorization": f"Bearer {api_key}",
+                    "Content-Type": "application/json"
+                },
+                json={
+                    "model": "llama-3.3-70b-versatile",
+                    "messages": [
+                        {"role": "system", "content": "You are a JSON-only response bot."},
+                        {"role": "user", "content": prompt}
+                    ],
+                    "temperature": 0.3,
+                    "response_format": {"type": "json_object"}
+                }
+            )
+            
+            if response.status_code == 200:
+                data = response.json()
+                result_str = data["choices"][0]["message"]["content"]
+                return json.loads(result_str)
+            else:
+                logger.error(f"Groq API returned status {response.status_code} for AI details: {response.text}")
+    except Exception as e:
+        logger.error(f"Error generating AI product details: {e}")
+    return {}

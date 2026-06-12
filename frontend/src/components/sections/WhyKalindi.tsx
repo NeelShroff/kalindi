@@ -2,6 +2,7 @@
 
 import { motion } from "framer-motion";
 import { Shield, Leaf, Award, Truck, Heart, Star } from "lucide-react";
+import Image from "next/image";
 
 const reasons = [
   {
@@ -12,7 +13,7 @@ const reasons = [
   {
     icon: Award,
     title: "FSSAI Certified",
-    desc: "Fully certified and compliant with India's highest food safety standards.",
+    desc: "Fully certified (License No: 21521053000260) and compliant with India's highest food safety standards.",
   },
   {
     icon: Leaf,
@@ -40,7 +41,7 @@ export default function WhyKalindi() {
   return (
     <section id="why-kalindi" className="relative pt-14 pb-32 px-6 z-10 bg-[#0a0713]">
       {/* Background glow */}
-      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[600px] h-[300px] bg-[#e91e8c]/10 blur-[120px] pointer-events-none" />
+      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[600px] h-[300px] bg-[radial-gradient(circle_at_center,rgba(233,30,140,0.08)_0%,transparent_70%)] pointer-events-none" />
 
       <div className="max-w-7xl mx-auto">
         <motion.div
@@ -75,8 +76,18 @@ export default function WhyKalindi() {
               whileHover={{ y: -6 }}
               className="p-8 rounded-3xl border border-emerald-500/20 bg-emerald-50/40 backdrop-blur-sm hover:border-emerald-500/40 hover:bg-emerald-100/30 transition-all duration-300 group text-left"
             >
-              <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-700 flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
-                <reason.icon className="w-6 h-6 text-white" />
+              <div className="w-12 h-12 rounded-2xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform bg-white border border-emerald-500/20 px-1.5 shadow-sm">
+                {reason.title === "FSSAI Certified" ? (
+                  <Image
+                    src="/image.webp"
+                    alt="FSSAI Logo"
+                    width={48}
+                    height={48}
+                    className="w-full h-auto object-contain"
+                  />
+                ) : (
+                  <reason.icon className="w-6 h-6 text-emerald-600" />
+                )}
               </div>
               <h3 className="text-xl font-bold text-emerald-950 mb-3">{reason.title}</h3>
               <p className="text-emerald-900/75 leading-relaxed">{reason.desc}</p>

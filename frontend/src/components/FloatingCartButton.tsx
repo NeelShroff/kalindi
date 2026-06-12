@@ -1,12 +1,14 @@
 "use client";
 
 import { useCart } from "@/context/CartContext";
+import { useAuth } from "@/context/AuthContext";
 import { ShoppingBag } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { usePathname } from "next/navigation";
 
 export default function FloatingCartButton() {
   const { cartCount, cartTotal, setIsCartOpen } = useCart();
+  const { user, openLoginModal } = useAuth();
   const pathname = usePathname();
 
   // Hide the floating cart button on the assistance page to avoid overlapping the chat input
@@ -22,8 +24,14 @@ export default function FloatingCartButton() {
           className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 w-[90%] max-w-sm"
         >
           <button
-            onClick={() => setIsCartOpen(true)}
-            className="w-full bg-amber-600 hover:bg-amber-700 text-white shadow-xl shadow-amber-900/20 rounded-full py-4 px-6 flex items-center justify-between transition-colors duration-300"
+            onClick={() => {
+              if (user) {
+                setIsCartOpen(true);
+              } else {
+                openLoginModal(() => setIsCartOpen(true));
+              }
+            }}
+            className="w-full bg-amber-600 hover:bg-amber-700 text-white shadow-xl shadow-amber-900/20 rounded-full py-4 px-6 flex items-center justify-between transition-colors duration-300 cursor-pointer"
           >
             <div className="flex items-center gap-3">
               <div className="relative">

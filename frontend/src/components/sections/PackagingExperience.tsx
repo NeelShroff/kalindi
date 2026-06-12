@@ -1,5 +1,6 @@
 "use client";
 
+import { useState, useEffect, useRef } from "react";
 import { motion } from "framer-motion";
 import { Package, Sparkles } from "lucide-react";
 import Image from "next/image";
@@ -12,9 +13,37 @@ const packagingFeatures = [
 ];
 
 export default function PackagingExperience() {
+  const [isOpen, setIsOpen] = useState(false);
+  const [isHovered, setIsHovered] = useState(false);
+  const [hasHover, setHasHover] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  const active = isOpen || isHovered;
+
+  useEffect(() => {
+    setHasHover(window.matchMedia("(hover: hover)").matches);
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          setIsOpen(true);
+        } else {
+          setIsOpen(false);
+        }
+      },
+      { threshold: 0.3 }
+    );
+
+    if (containerRef.current) {
+      observer.observe(containerRef.current);
+    }
+
+    return () => observer.disconnect();
+  }, []);
+
   return (
     <section id="packaging" className="relative py-32 px-6 z-10">
-      <div className="absolute right-0 top-1/2 -translate-y-1/2 w-[400px] h-[500px] bg-indigo-500/5 blur-[120px] pointer-events-none" />
+      <div className="absolute right-0 top-1/2 -translate-y-1/2 w-[400px] h-[500px] bg-[radial-gradient(circle_at_center,rgba(99,102,241,0.04)_0%,transparent_70%)] pointer-events-none" />
       <div className="max-w-7xl mx-auto">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-20 items-center">
           {/* Packaging Visual */}
@@ -26,32 +55,38 @@ export default function PackagingExperience() {
             className="relative"
           >
             {/* Main Interactive Parallax Container */}
-            <div className="relative w-full h-[520px] max-w-md mx-auto rounded-[32px] overflow-hidden bg-gradient-to-b from-[#180e29]/30 to-[#0c0617]/10 border border-purple-500/10 shadow-2xl cursor-pointer group">
+            <div 
+              ref={containerRef}
+              onMouseEnter={() => hasHover && setIsHovered(true)}
+              onMouseLeave={() => hasHover && setIsHovered(false)}
+              onClick={() => setIsOpen(!isOpen)}
+              className="relative w-full h-[520px] max-w-md mx-auto rounded-[32px] overflow-hidden bg-gradient-to-b from-[#180e29]/30 to-[#0c0617]/10 border border-purple-500/10 shadow-2xl cursor-pointer"
+            >
               <div className="absolute inset-0 bg-[#07030b]/40 backdrop-blur-[2px] pointer-events-none" />
               
               <div className="relative w-full h-full flex items-center justify-center p-8">
                 
                 {/* LAYER 1: BASE CONTAINER (Velvet Base silhouette - stays centered) */}
-                <div className="absolute w-[240px] h-[240px] bg-gradient-to-br from-[#12081f] to-[#07030b] rounded-[24px] border-2 border-purple-950/60 shadow-inner flex items-center justify-center transition-all duration-700 group-hover:scale-95">
+                <div className={`absolute w-[240px] h-[240px] bg-gradient-to-br from-[#12081f] to-[#07030b] rounded-[24px] border-2 border-purple-950/60 shadow-inner flex items-center justify-center transition-all duration-700 ${active ? "scale-95" : ""}`}>
                   <div className="absolute inset-3 border border-purple-900/15 rounded-[18px] flex items-center justify-center opacity-40">
                     <span className="text-[9px] tracking-[0.3em] text-[#fae8ff]/20 font-black">VACUUM CHAMBER</span>
                   </div>
                 </div>
 
                 {/* LAYER 2: THE TRAY WITH GOLD JARS (Reveals and slides top-right) */}
-                <div className="absolute w-[230px] h-[230px] bg-[#0f0717]/95 rounded-[22px] border border-[#D4AF37]/25 shadow-lg flex flex-col justify-around p-4 transition-all duration-700 ease-[cubic-bezier(0.16,1,0.3,1)] group-hover:translate-x-20 group-hover:-translate-y-20 group-hover:scale-105 group-hover:rotate-[4deg] group-hover:shadow-[0_20px_50px_rgba(0,0,0,0.6)] z-10">
+                <div className={`absolute w-[230px] h-[230px] bg-[#0f0717]/95 rounded-[22px] border border-[#D4AF37]/25 shadow-lg flex flex-col justify-around p-4 transition-all duration-700 ease-[cubic-bezier(0.16,1,0.3,1)] z-10 ${active ? "translate-x-20 -translate-y-20 scale-105 rotate-[4deg] shadow-[0_20px_50px_rgba(0,0,0,0.6)]" : ""}`}>
                   <span className="text-[8px] text-[#D4AF37] font-black uppercase tracking-[0.25em] text-center">Keepsake Drawer</span>
                   
                   {/* 3 Premium Glass Jars */}
                   <div className="grid grid-cols-3 gap-3 z-10 my-auto items-end px-2">
                     {[
-                      { name: "Almonds", image: "/almonds.png" },
-                      { name: "Cashews", image: "/cashews.png" },
-                      { name: "Pistachios", image: "/pistachios.png" }
+                      { name: "Almonds", image: "/almonds.webp" },
+                      { name: "Cashews", image: "/cashews.webp" },
+                      { name: "Pistachios", image: "/pistachios.webp" }
                     ].map((jar, index) => (
                       <div 
                         key={jar.name} 
-                        className="flex flex-col group-hover:translate-y-[-8px] transition-transform duration-500 ease-out"
+                        className={`flex flex-col transition-transform duration-500 ease-out ${active ? "translate-y-[-8px]" : ""}`}
                         style={{ transitionDelay: `${index * 100}ms` }}
                       >
                         {/* Shiny Gold Lid */}
@@ -87,7 +122,7 @@ export default function PackagingExperience() {
                 </div>
 
                 {/* LAYER 3: GOLD FOIL GREETING CARD (Slides bottom-left) */}
-                <div className="absolute w-[180px] h-[110px] bg-gradient-to-br from-[#fffefc] to-[#fcfaf2] rounded-xl shadow-md border border-[#D4AF37]/35 p-3 flex flex-col justify-between transition-all duration-700 ease-[cubic-bezier(0.16,1,0.3,1)] group-hover:-translate-x-24 group-hover:translate-y-24 group-hover:scale-110 group-hover:-rotate-[5deg] group-hover:shadow-[0_15px_30px_rgba(0,0,0,0.3)] z-15">
+                <div className={`absolute w-[180px] h-[110px] bg-gradient-to-br from-[#fffefc] to-[#fcfaf2] rounded-xl shadow-md border border-[#D4AF37]/35 p-3 flex flex-col justify-between transition-all duration-700 ease-[cubic-bezier(0.16,1,0.3,1)] z-15 ${active ? "-translate-x-24 translate-y-24 scale-110 -rotate-[5deg] shadow-[0_15px_30px_rgba(0,0,0,0.3)]" : ""}`}>
                   <div className="flex justify-between items-start border-b border-[#D4AF37]/20 pb-1.5">
                     <span className="text-[8px] text-[#AA7C11] font-black uppercase tracking-wider">A Gift of Wellness</span>
                     <Sparkles className="w-2.5 h-2.5 text-[#D4AF37]" />
@@ -102,7 +137,7 @@ export default function PackagingExperience() {
                 </div>
 
                 {/* LAYER 4: RIBBONED KEEPSAKE LID (Slides top-left and fades opacity slightly) */}
-                <div className="absolute w-[240px] h-[240px] bg-gradient-to-br from-[#1d0e2e] via-[#0d0714] to-[#050208] rounded-[24px] border-2 border-[#D4AF37]/30 shadow-2xl transition-all duration-700 ease-[cubic-bezier(0.16,1,0.3,1)] group-hover:-translate-x-12 group-hover:-translate-y-28 group-hover:scale-95 group-hover:-rotate-[8deg] group-hover:shadow-[0_30px_60px_rgba(0,0,0,0.65)] z-20 flex flex-col items-center justify-center">
+                <div className={`absolute w-[240px] h-[240px] bg-gradient-to-br from-[#1d0e2e] via-[#0d0714] to-[#050208] rounded-[24px] border-2 border-[#D4AF37]/30 shadow-2xl transition-all duration-700 ease-[cubic-bezier(0.16,1,0.3,1)] z-20 flex flex-col items-center justify-center ${active ? "-translate-x-12 -translate-y-28 scale-95 -rotate-[8deg] shadow-[0_30px_60px_rgba(0,0,0,0.65)]" : ""}`}>
                   {/* Lid Lining Inset */}
                   <div className="absolute inset-2.5 border border-[#D4AF37]/15 rounded-[18px] pointer-events-none" />
 
@@ -116,7 +151,7 @@ export default function PackagingExperience() {
                       <Package className="w-6 h-6 text-[#160b24]" />
                     </div>
                     <Image
-                      src="/kalindi.png"
+                      src="/kalindi.webp"
                       alt="Kalindi"
                       width={130}
                       height={40}
@@ -127,7 +162,7 @@ export default function PackagingExperience() {
 
                   {/* Pulse Hint */}
                   <div className="absolute bottom-4 flex items-center gap-1.5 text-purple-200/50 text-[9px] tracking-[0.2em] uppercase font-black animate-pulse z-30">
-                    <span>Hover to Open</span>
+                    <span>{active ? "Tap to Close" : "Hover to Open"}</span>
                     <Sparkles className="w-3 h-3 text-[#D4AF37]" />
                   </div>
                 </div>

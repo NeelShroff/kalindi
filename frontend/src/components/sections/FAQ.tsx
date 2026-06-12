@@ -27,7 +27,7 @@ const faqs = [
   },
   {
     q: "Are your products FSSAI certified?",
-    a: "Yes, Kalindi is fully FSSAI certified (License No: 11221999000425). All our products undergo rigorous quality testing at ISO-certified labs before reaching you.",
+    a: "Yes, Kalindi is fully FSSAI certified (License No: 21521053000260). All our products undergo rigorous quality testing at ISO-certified labs before reaching you.",
   },
   {
     q: "Can I get gift packaging for any product?",

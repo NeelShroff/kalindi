@@ -2,8 +2,9 @@
 
 import React, { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { X, Trash2, Plus, Minus, ArrowRight, ArrowLeft, ShoppingBag, Sparkles, CheckCircle } from "lucide-react";
+import { X, Trash2, Plus, Minus, ArrowRight, ArrowLeft, ShoppingBag, Sparkles, CheckCircle, Lock } from "lucide-react";
 import { useCart } from "@/context/CartContext";
+import { useAuth } from "@/context/AuthContext";
 
 export default function CartDrawer() {
   const {
@@ -16,6 +17,8 @@ export default function CartDrawer() {
     isCartOpen,
     setIsCartOpen,
   } = useCart();
+  
+  const { user, updateUser } = useAuth();
 
   const [step, setStep] = useState<"cart" | "checkout" | "success">("cart");
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -31,26 +34,30 @@ export default function CartDrawer() {
   
   const [errors, setErrors] = useState<Record<string, string>>({});
 
-  // Auto-fill checkout fields if user profile is saved in localStorage
+  // Auto-fill checkout fields if user profile is loaded
   React.useEffect(() => {
-    if (step === "checkout") {
-      try {
-        const savedProfile = localStorage.getItem("kalindi_user_profile");
-        if (savedProfile) {
-          const parsed = JSON.parse(savedProfile);
-          if (parsed && parsed.email) {
-            setForm((prev) => ({
-              ...prev,
-              name: prev.name || parsed.name || "",
-              email: prev.email || parsed.email || "",
-            }));
-          }
-        }
-      } catch (e) {
-        console.error("Failed to parse user profile from localStorage:", e);
-      }
+    if (step === "checkout" && user) {
+      setForm((prev) => ({
+        ...prev,
+        name: user.name || "",
+        email: user.email || "",
+        phone: prev.phone || user.phone || "",
+        address: prev.address || user.address || "",
+      }));
     }
-  }, [step]);
+  }, [step, user]);
+
+  // Prevent body scrolling when Cart is open
+  React.useEffect(() => {
+    if (isCartOpen) {
+      document.body.style.overflow = "hidden";
+    } else {
+      document.body.style.overflow = "";
+    }
+    return () => {
+      document.body.style.overflow = "";
+    };
+  }, [isCartOpen]);
 
   if (!isCartOpen) return null;
 
@@ -81,6 +88,16 @@ export default function CartDrawer() {
     
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
+  };
+
+  const loadRazorpayScript = () => {
+    return new Promise((resolve) => {
+      const script = document.createElement("script");
+      script.src = "https://checkout.razorpay.com/v1/checkout.js";
+      script.onload = () => resolve(true);
+      script.onerror = () => resolve(false);
+      document.body.appendChild(script);
+    });
   };
 
   const handleCheckout = async (e: React.FormEvent) => {
@@ -122,13 +139,127 @@ export default function CartDrawer() {
       }
 
       const orderData = await response.json();
-      setOrderId(orderData.id);
-      clearCart();
-      setStep("success");
+      
+      // Auto-simulate mock payment if in demo/local mode without credentials
+      if (orderData.razorpay_order_id.startsWith("order_mock_")) {
+        setTimeout(async () => {
+          try {
+            const verifyResponse = await fetch(`${apiUrl}/api/orders/${orderData.id}/verify`, {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify({
+                razorpay_order_id: orderData.razorpay_order_id,
+                razorpay_payment_id: "pay_mock_" + Math.random().toString(36).substring(2, 15),
+                razorpay_signature: "sig_mock_" + Math.random().toString(36).substring(2, 15),
+              }),
+            });
+
+            if (!verifyResponse.ok) {
+              throw new Error("Payment verification failed");
+            }
+
+            const verifiedOrder = await verifyResponse.json();
+            setOrderId(verifiedOrder.id);
+            clearCart();
+            setStep("success");
+            if (user) {
+              updateUser({
+                ...user,
+                phone: form.phone,
+                address: form.address
+              });
+            }
+          } catch (verifyErr) {
+            console.error(verifyErr);
+            alert("Sandbox payment verification failed. Please try again.");
+          } finally {
+            setIsSubmitting(false);
+          }
+        }, 1000);
+        return;
+      }
+      
+      // Live Razorpay Mode
+      const scriptLoaded = await loadRazorpayScript();
+      if (!scriptLoaded) {
+        alert("Failed to load Razorpay SDK. Please check your network connection.");
+        setIsSubmitting(false);
+        return;
+      }
+
+      const razorpayKey = process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID || "rzp_test_placeholder_key";
+
+      const options = {
+        key: razorpayKey,
+        amount: Math.round(payload.total_amount * 100), // in paise
+        currency: "INR",
+        name: "Kalindi Dry Fruits",
+        description: "Premium Wellness Goods",
+        image: "/kalindi.webp",
+        order_id: orderData.razorpay_order_id,
+        handler: async function (paymentResponse: any) {
+          setIsSubmitting(true);
+          try {
+            const verifyResponse = await fetch(`${apiUrl}/api/orders/${orderData.id}/verify`, {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify({
+                razorpay_order_id: paymentResponse.razorpay_order_id,
+                razorpay_payment_id: paymentResponse.razorpay_payment_id,
+                razorpay_signature: paymentResponse.razorpay_signature,
+              }),
+            });
+
+            if (!verifyResponse.ok) {
+              throw new Error("Payment verification failed");
+            }
+
+            const verifiedOrder = await verifyResponse.json();
+            setOrderId(verifiedOrder.id);
+            clearCart();
+            setStep("success");
+            if (user) {
+              updateUser({
+                ...user,
+                phone: form.phone,
+                address: form.address
+              });
+            }
+          } catch (verifyErr) {
+            console.error(verifyErr);
+            alert("Payment verification failed. Please contact customer support.");
+          } finally {
+            setIsSubmitting(false);
+          }
+        },
+        prefill: {
+          name: form.name,
+          email: form.email,
+          contact: form.phone,
+        },
+        notes: {
+          address: form.address,
+        },
+        theme: {
+          color: "#3D1A5C",
+        },
+        modal: {
+          ondismiss: function () {
+            setIsSubmitting(false);
+          }
+        }
+      };
+
+      const rzp = new (window as any).Razorpay(options);
+      rzp.open();
+
     } catch (err: any) {
       console.error(err);
       alert("Something went wrong while placing your order. Please try again.");
-    } finally {
       setIsSubmitting(false);
     }
   };
@@ -150,7 +281,7 @@ export default function CartDrawer() {
   const grandTotal = cartTotal + (isFreeShipping ? 0 : shippingFee);
 
   return (
-    <div className="fixed inset-0 z-50 overflow-hidden">
+    <div data-lenis-prevent className="fixed inset-0 z-50 overflow-hidden">
       {/* Backdrop */}
       <motion.div
         initial={{ opacity: 0 }}
@@ -347,33 +478,49 @@ export default function CartDrawer() {
                     <h3 className="text-lg font-bold text-white/95 border-b border-white/5 pb-2">Shipping Information</h3>
 
                     <div className="space-y-4">
-                      {/* Name */}
-                      <div className="space-y-1">
-                        <label className="text-xs font-semibold text-white/70 block">Full Name</label>
-                        <input
-                          type="text"
-                          name="name"
-                          value={form.name}
-                          onChange={handleInputChange}
-                          className={`w-full px-4 py-3 rounded-xl bg-white/5 border ${errors.name ? "border-red-500 focus:border-red-500" : "border-white/10 focus:border-[#e91e8c]"} text-white placeholder:text-white/20 outline-none transition-colors`}
-                          placeholder="e.g. Jiten Shroff"
-                        />
-                        {errors.name && <p className="text-xs text-red-400">{errors.name}</p>}
-                      </div>
-
-                      {/* Email */}
-                      <div className="space-y-1">
-                        <label className="text-xs font-semibold text-white/70 block">Email Address</label>
-                        <input
-                          type="email"
-                          name="email"
-                          value={form.email}
-                          onChange={handleInputChange}
-                          className={`w-full px-4 py-3 rounded-xl bg-white/5 border ${errors.email ? "border-red-500 focus:border-red-500" : "border-white/10 focus:border-[#e91e8c]"} text-white placeholder:text-white/20 outline-none transition-colors`}
-                          placeholder="e.g. customer@example.com"
-                        />
-                        {errors.email && <p className="text-xs text-red-400">{errors.email}</p>}
-                      </div>
+                       {/* Name */}
+                       <div className="space-y-1">
+                         <label className="text-xs font-semibold text-white/70 block">Full Name</label>
+                         <div className="relative">
+                           <input
+                             type="text"
+                             name="name"
+                             value={form.name}
+                             onChange={handleInputChange}
+                             readOnly={!!user}
+                             className={`w-full px-4 py-3 rounded-xl bg-white/5 border ${errors.name ? "border-red-500 focus:border-red-500" : "border-white/10 focus:border-[#e91e8c]"} text-white placeholder:text-white/20 outline-none transition-colors ${
+                               user ? "opacity-75 cursor-not-allowed bg-white/0 border-dashed border-purple-500/30 pr-10" : ""
+                             }`}
+                             placeholder="e.g. Jiten Shroff"
+                           />
+                           {user && (
+                             <Lock className="w-4 h-4 text-purple-400 absolute right-3.5 top-1/2 -translate-y-1/2" />
+                           )}
+                         </div>
+                         {errors.name && <p className="text-xs text-red-400">{errors.name}</p>}
+                       </div>
+ 
+                       {/* Email */}
+                       <div className="space-y-1">
+                         <label className="text-xs font-semibold text-white/70 block">Email Address</label>
+                         <div className="relative">
+                           <input
+                             type="email"
+                             name="email"
+                             value={form.email}
+                             onChange={handleInputChange}
+                             readOnly={!!user}
+                             className={`w-full px-4 py-3 rounded-xl bg-white/5 border ${errors.email ? "border-red-500 focus:border-red-500" : "border-white/10 focus:border-[#e91e8c]"} text-white placeholder:text-white/20 outline-none transition-colors ${
+                               user ? "opacity-75 cursor-not-allowed bg-white/0 border-dashed border-purple-500/30 pr-10" : ""
+                             }`}
+                             placeholder="e.g. customer@example.com"
+                           />
+                           {user && (
+                             <Lock className="w-4 h-4 text-purple-400 absolute right-3.5 top-1/2 -translate-y-1/2" />
+                           )}
+                         </div>
+                         {errors.email && <p className="text-xs text-red-400">{errors.email}</p>}
+                       </div>
 
                       {/* Phone */}
                       <div className="space-y-1">

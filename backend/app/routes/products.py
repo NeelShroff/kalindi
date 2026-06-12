@@ -5,6 +5,7 @@ from ..database import get_db
 from ..models import Product
 from ..schemas import ProductCreate, ProductUpdate, ProductResponse
 from ..auth import get_current_admin
+from ..services.agent import generate_product_details
 
 router = APIRouter(prefix="/api/products", tags=["products"])
 
@@ -79,3 +80,13 @@ def delete_product(
     product.is_active = False
     db.commit()
     return None
+
+@router.get("/{product_id}/ai-details")
+async def get_ai_product_details(product_id: int, db: Session = Depends(get_db)):
+    """Fetch AI-generated dynamic benefits and specifications for a product (leveraging Groq)."""
+    product = db.query(Product).filter(Product.id == product_id, Product.is_active == True).first()
+    if not product:
+        raise HTTPException(status_code=404, detail="Product not found")
+        
+    details = await generate_product_details(product.name, product.description or "")
+    return details

@@ -61,7 +61,7 @@ export default function GiftCollections() {
 
   return (
     <section id="gifts" className="relative py-32 px-6 z-10">
-      <div className="absolute bottom-0 right-0 w-[400px] h-[400px] bg-purple-500/10 blur-[100px] pointer-events-none" />
+      <div className="absolute bottom-0 right-0 w-[400px] h-[400px] bg-[radial-gradient(circle_at_center,rgba(168,85,247,0.08)_0%,transparent_70%)] pointer-events-none" />
 
       <div className="max-w-7xl mx-auto">
         {/* Header */}

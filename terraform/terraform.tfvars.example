@@ -1,0 +1,12 @@
+# AWS Region where the instance will be launched
+aws_region = "us-east-1"
+
+# The name of the SSH Key Pair created in your AWS Console (do NOT include the .pem file extension)
+key_name = "your-aws-key-pair-name"
+
+# Restrict SSH access to your own IP address for security (e.g. "203.0.113.50/32"). 
+# Keep it as "0.0.0.0/0" to allow SSH from any IP (less secure).
+ssh_allowed_ip = "0.0.0.0/0"
+
+# Project tag to categorize AWS resources
+project_name = "kalindi"

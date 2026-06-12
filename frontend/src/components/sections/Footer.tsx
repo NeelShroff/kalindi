@@ -1,16 +1,30 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { Share2, MessageSquare, AtSign, Mail, Phone, MapPin, ArrowRight } from "lucide-react";
+import { Share2, Instagram, MessageCircle, AtSign, Mail, Phone, MapPin, ArrowRight } from "lucide-react";
 import Image from "next/image";
+import Link from "next/link";
 
 export default function Footer() {
+  const handleShare = () => {
+    if (typeof navigator !== "undefined" && navigator.share) {
+      navigator.share({
+        title: "Kalindi Dry Fruits & Wellness",
+        text: "Premium dry fruits and luxury wellness gifts.",
+        url: typeof window !== "undefined" ? window.location.origin : "",
+      }).catch((err) => console.log(err));
+    } else if (typeof navigator !== "undefined") {
+      navigator.clipboard.writeText(typeof window !== "undefined" ? window.location.origin : "");
+      alert("Link copied to clipboard!");
+    }
+  };
+
   return (
     <footer id="contact" className="relative z-10 bg-transparent border-t border-kalindi-purple/20">
       {/* Newsletter CTA */}
       <div className="relative py-20 px-6 bg-kalindi-purple/5 backdrop-blur-md border-b border-kalindi-purple/20 overflow-hidden">
         <div className="absolute inset-0 pointer-events-none">
-          <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[300px] bg-[#e91e8c]/15 blur-[100px]" />
+          <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[300px] bg-[radial-gradient(circle_at_center,rgba(233,30,140,0.12)_0%,transparent_70%)]" />
         </div>
         <div className="max-w-3xl mx-auto text-center relative z-10">
           <motion.div
@@ -50,7 +64,7 @@ export default function Footer() {
           <div className="md:col-span-1">
             <div className="mb-6">
               <Image
-                src="/kalindi.png"
+                src="/kalindi.webp"
                 alt="Kalindi"
                 width={180}
                 height={60}
@@ -61,11 +75,47 @@ export default function Footer() {
               Premium dry fruits and wellness gifts for those who believe the best things in life should be both healthy and luxurious.
             </p>
             <div className="flex gap-3">
-              {[Share2, MessageSquare, AtSign].map((Icon, i) => (
-                <button key={i} className="w-9 h-9 rounded-full border border-kalindi-purple/25 hover:border-[#e91e8c] hover:bg-[#e91e8c]/10 transition-all flex items-center justify-center group">
-                  <Icon className="w-4 h-4 text-[#0f1a34]/60 group-hover:text-[#e91e8c]" />
-                </button>
-              ))}
+              {/* WhatsApp */}
+              <a
+                href="https://wa.me/918850353695"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="w-9 h-9 rounded-full border border-kalindi-purple/25 hover:border-[#e91e8c] hover:bg-[#e91e8c]/10 transition-all flex items-center justify-center group"
+                title="Chat on WhatsApp"
+              >
+                <MessageCircle className="w-4 h-4 text-[#0f1a34]/60 group-hover:text-[#e91e8c]" />
+              </a>
+
+              {/* Instagram */}
+              <a
+                href="https://www.instagram.com/kalindi_dryfruit/"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="w-9 h-9 rounded-full border border-kalindi-purple/25 hover:border-[#e91e8c] hover:bg-[#e91e8c]/10 transition-all flex items-center justify-center group"
+                title="Follow on Instagram"
+              >
+                <Instagram className="w-4 h-4 text-[#0f1a34]/60 group-hover:text-[#e91e8c]" />
+              </a>
+
+              {/* Email */}
+              <a
+                href="https://mail.google.com/mail/?view=cm&fs=1&to=kalindidryfruit@gmail.com"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="w-9 h-9 rounded-full border border-kalindi-purple/25 hover:border-[#e91e8c] hover:bg-[#e91e8c]/10 transition-all flex items-center justify-center group"
+                title="Send Email"
+              >
+                <AtSign className="w-4 h-4 text-[#0f1a34]/60 group-hover:text-[#e91e8c]" />
+              </a>
+
+              {/* Share */}
+              <button
+                onClick={handleShare}
+                className="w-9 h-9 rounded-full border border-kalindi-purple/25 hover:border-[#e91e8c] hover:bg-[#e91e8c]/10 transition-all flex items-center justify-center group"
+                title="Share Website"
+              >
+                <Share2 className="w-4 h-4 text-[#0f1a34]/60 group-hover:text-[#e91e8c]" />
+              </button>
             </div>
           </div>
 
@@ -73,11 +123,12 @@ export default function Footer() {
           <div>
             <h4 className="text-kalindi-purple font-semibold mb-6">Shop</h4>
             <ul className="space-y-3 text-sm text-[#0f1a34]/70">
-              {["Almonds", "Cashews", "Pistachios", "Raisins & Dates", "Makhana", "Gift Boxes", "Healthy Snacks"].map((item) => (
-                <li key={item}>
-                  <a href="#" className="hover:text-[#e91e8c] transition-colors">{item}</a>
-                </li>
-              ))}
+              <li>
+                <a href="/collection" className="hover:text-[#e91e8c] transition-colors">All Products</a>
+              </li>
+              <li>
+                <a href="/#gifts" className="hover:text-[#e91e8c] transition-colors">Gift Boxes</a>
+              </li>
             </ul>
           </div>
 
@@ -85,11 +136,18 @@ export default function Footer() {
           <div>
             <h4 className="text-kalindi-purple font-semibold mb-6">Company</h4>
             <ul className="space-y-3 text-sm text-[#0f1a34]/70">
-              {["About Us", "Our Story", "Blog & Recipes", "Press", "Careers", "Corporate Gifting", "Franchise"].map((item) => (
-                <li key={item}>
-                  <a href="#" className="hover:text-[#e91e8c] transition-colors">{item}</a>
-                </li>
-              ))}
+              <li>
+                <a href="/#story" className="hover:text-[#e91e8c] transition-colors">Our Story</a>
+              </li>
+              <li>
+                <a href="/#faq" className="hover:text-[#e91e8c] transition-colors">FAQ</a>
+              </li>
+              <li>
+                <a href="/assistance" className="hover:text-[#e91e8c] transition-colors">AI Assistant</a>
+              </li>
+              <li>
+                <a href="/#contact" className="hover:text-[#e91e8c] transition-colors">Contact Us</a>
+              </li>
             </ul>
           </div>
 
@@ -99,16 +157,29 @@ export default function Footer() {
             <ul className="space-y-4 text-sm text-[#0f1a34]/70">
               <li className="flex items-start gap-3">
                 <Mail className="w-4 h-4 text-[#e91e8c] mt-0.5 flex-shrink-0" />
-                <span className="text-[#0f1a34]/80">kalindidryfruit@gmail.com</span>
+                <a
+                  href="https://mail.google.com/mail/?view=cm&fs=1&to=kalindidryfruit@gmail.com"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-[#0f1a34]/80 hover:text-[#e91e8c] transition-colors"
+                >
+                  kalindidryfruit@gmail.com
+                </a>
               </li>
               <li className="flex items-start gap-3">
                 <Phone className="w-4 h-4 text-[#e91e8c] mt-0.5 flex-shrink-0" />
-                <span className="text-[#0f1a34]/80">+91 8850353695</span>
+                <div className="flex flex-col gap-1.5">
+                  <a href="tel:+919930506270" className="text-[#0f1a34]/80 hover:text-[#e91e8c] transition-colors">
+                    +91 9930506270 (Pratibha)
+                  </a>
+                  <a href="tel:+918850353695" className="text-[#0f1a34]/80 hover:text-[#e91e8c] transition-colors">
+                    +91 8850353695 (Ketan)
+                  </a>
+                </div>
               </li>
               <li className="flex items-start gap-3">
                 <MapPin className="w-4 h-4 text-[#e91e8c] mt-0.5 flex-shrink-0" />
-                <span className="text-[#0f1a34]/80">1303,shree royal height ,ashok nagar
-kandivali-east,<br />Mumbai-4000101</span>
+                <span className="text-[#0f1a34]/80">1303, shree royal height, ashok nagar<br />kandivali-east, Mumbai-400101</span>
               </li>
             </ul>
           </div>
@@ -118,10 +189,24 @@ kandivali-east,<br />Mumbai-4000101</span>
       {/* Bottom Bar */}
       <div className="border-t border-kalindi-purple/20 px-6 py-6">
         <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
-          <p className="text-[#0f1a34]/60 text-xs">
-            © 2024 Kalindi Dry Fruits. All rights reserved. FSSAI: 11221999000425
-          </p>
-          <div className="flex gap-6 text-xs text-[#0f1a34]/60">
+          <div className="flex flex-wrap items-center justify-center sm:justify-start gap-4">
+            <p className="text-[#0f1a34]/60 text-xs text-center sm:text-left">
+              © 2024 Kalindi Dry Fruits. All rights reserved.
+            </p>
+            <div className="flex items-center justify-center gap-2 bg-white/90 px-2.5 py-1 rounded border border-kalindi-purple/10 shadow-sm h-8">
+              <Image
+                src="/image.webp"
+                alt="FSSAI Logo"
+                width={50}
+                height={20}
+                className="h-5 w-auto object-contain"
+              />
+              <span className="text-[10px] font-bold text-[#0f1a34]/80 border-l border-kalindi-purple/20 pl-2 tracking-wider">
+                21521053000260
+              </span>
+            </div>
+          </div>
+          <div className="flex flex-wrap justify-center gap-6 text-xs text-[#0f1a34]/60">
             {["Privacy Policy", "Terms of Service", "Shipping Policy", "Returns"].map((l) => (
               <a key={l} href="#" className="hover:text-[#e91e8c] transition-colors">{l}</a>
             ))}

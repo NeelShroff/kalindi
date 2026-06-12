@@ -21,6 +21,9 @@ class Settings:
     SENDER_EMAIL: str = os.getenv("SENDER_EMAIL", "")
     OWNER_EMAIL: str = os.getenv("OWNER_EMAIL", "")
     GROQ_API_KEY: str = os.getenv("GROQ_API_KEY", "")
+    
+    RAZORPAY_KEY_ID: str = os.getenv("RAZORPAY_KEY_ID", "rzp_test_placeholder_key")
+    RAZORPAY_KEY_SECRET: str = os.getenv("RAZORPAY_KEY_SECRET", "placeholder_secret")
 
 settings = Settings()
 

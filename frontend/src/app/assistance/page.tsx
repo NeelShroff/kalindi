@@ -24,9 +24,11 @@ import {
   Sparkles,
   Lock,
   ShoppingBag,
-  RotateCcw
+  RotateCcw,
+  LogIn
 } from "lucide-react";
 import { useCart } from "@/context/CartContext";
+import { useAuth } from "@/context/AuthContext";
 import ChatProductCard from "@/components/ChatProductCard";
 import Link from "next/link";
 
@@ -61,8 +63,7 @@ export default function AssistancePage() {
   const [activePanel, setActivePanel] = useState<"quiz" | "hamper" | null>(null);
   
   // Auth state
-  const [user, setUser] = useState<UserProfile | null>(null);
-  const [token, setToken] = useState<string | null>(null);
+  const { user, token, openLoginModal, logout } = useAuth();
   
   // Session / History state
   const [sessions, setSessions] = useState<ChatSession[]>([]);
@@ -114,71 +115,12 @@ Let's craft the perfect custom hamper, evaluate your wellness needs, or answer q
 
   const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8088";
 
-  // 1. Initial Authentication & Google Script Setup
+  // Load chat sessions when token becomes available
   useEffect(() => {
-    // Load existing credentials from LocalStorage
-    const savedToken = localStorage.getItem("kalindi_user_token");
-    const savedProfile = localStorage.getItem("kalindi_user_profile");
-    if (savedToken && savedProfile) {
-      try {
-        setToken(savedToken);
-        const parsedProfile = JSON.parse(savedProfile);
-        setUser(parsedProfile);
-        fetchSessions(savedToken);
-      } catch (e) {
-        console.error("Failed to restore saved credentials:", e);
-      }
+    if (token) {
+      fetchSessions(token);
     }
-
-    // Dynamically load Google GSI script
-    const script = document.createElement("script");
-    script.src = "https://accounts.google.com/gsi/client";
-    script.async = true;
-    script.defer = true;
-    document.body.appendChild(script);
-
-    script.onload = () => {
-      if ((window as any).google?.accounts?.id) {
-        (window as any).google.accounts.id.initialize({
-          client_id: process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID || "7880036622204-demo-client-id-placeholder.apps.googleusercontent.com", // client id
-          callback: handleGoogleCredentialResponse,
-        });
-
-        const btnContainer = document.getElementById("google-signin-button");
-        if (btnContainer) {
-          (window as any).google.accounts.id.renderButton(btnContainer, {
-            theme: "outline",
-            size: "large",
-            text: "signin_with",
-            shape: "pill",
-          });
-        }
-      }
-    };
-
-    return () => {
-      try {
-        document.body.removeChild(script);
-      } catch (e) {}
-    };
-  }, []);
-
-  // Sync Google buttons if user login state changes
-  useEffect(() => {
-    if (!user && (window as any).google?.accounts?.id) {
-      setTimeout(() => {
-        const btnContainer = document.getElementById("google-signin-button");
-        if (btnContainer) {
-          (window as any).google.accounts.id.renderButton(btnContainer, {
-            theme: "outline",
-            size: "large",
-            text: "signin_with",
-            shape: "pill",
-          });
-        }
-      }, 100);
-    }
-  }, [user]);
+  }, [token]);
 
   // Load chat history when selected session changes
   useEffect(() => {
@@ -222,38 +164,17 @@ I am your **Personal Shopper**, here to help you select our finest dry fruits, n
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, isLoading]);
 
-  // Speech recognition initialization
+  // Speech recognition cleanup on unmount
   useEffect(() => {
-    if (typeof window !== "undefined") {
-      const SpeechRecognition =
-        (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
-      if (SpeechRecognition) {
-        const rec = new SpeechRecognition();
-        rec.continuous = false;
-        rec.interimResults = false;
-        rec.lang = "en-US";
-
-        rec.onstart = () => {
-          setIsListening(true);
-        };
-
-        rec.onresult = (event: any) => {
-          const transcript = event.results[0][0].transcript;
-          setInputVal((prev) => (prev ? prev + " " + transcript : transcript));
-        };
-
-        rec.onerror = (e: any) => {
-          console.error("Speech Recognition Error:", e);
-          setIsListening(false);
-        };
-
-        rec.onend = () => {
-          setIsListening(false);
-        };
-
-        recognitionRef.current = rec;
+    return () => {
+      if (recognitionRef.current) {
+        try {
+          recognitionRef.current.abort();
+        } catch (err) {
+          console.warn("Failed to abort SpeechRecognition:", err);
+        }
       }
-    }
+    };
   }, []);
 
   // 2. Fetch Sessions
@@ -293,72 +214,9 @@ I am your **Personal Shopper**, here to help you select our finest dry fruits, n
     }
   };
 
-  // 4. Google Auth handler
-  const handleGoogleCredentialResponse = async (response: any) => {
-    const credential = response.credential;
-    try {
-      setIsLoading(true);
-      const res = await fetch(`${apiUrl}/api/auth/google-login`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ credential }),
-      });
-
-      if (res.ok) {
-        const data = await res.json();
-        localStorage.setItem("kalindi_user_token", data.access_token);
-        localStorage.setItem("kalindi_user_profile", JSON.stringify(data.user));
-        setUser(data.user);
-        setToken(data.access_token);
-        fetchSessions(data.access_token);
-      }
-    } catch (error) {
-      console.error("Error signing in with Google:", error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  // 5. Concierge Demo Sign-In Simulation
-  const handleDemoSignIn = async () => {
-    try {
-      setIsLoading(true);
-      const res = await fetch(`${apiUrl}/api/auth/google-login`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          is_demo: true,
-          email: "connoisseur@kalindi.com",
-          name: "Guest Connoisseur",
-          picture: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&q=80&w=120",
-        }),
-      });
-
-      if (res.ok) {
-        const data = await res.json();
-        localStorage.setItem("kalindi_user_token", data.access_token);
-        localStorage.setItem("kalindi_user_profile", JSON.stringify(data.user));
-        setUser(data.user);
-        setToken(data.access_token);
-        fetchSessions(data.access_token);
-      }
-    } catch (error) {
-      console.error("Error signing in with demo account:", error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  // 6. Sign out
+  // 4. Sign out
   const handleSignOut = () => {
-    localStorage.removeItem("kalindi_user_token");
-    localStorage.removeItem("kalindi_user_profile");
-    setUser(null);
-    setToken(null);
+    logout();
     setSessions([]);
     setCurrentSessionId(null);
     setMessages([
@@ -402,7 +260,7 @@ Let's craft the perfect custom hamper, evaluate your wellness needs, or answer q
 
           // Loop through each item in the order and add it to the cart
           for (const item of order.items) {
-            let imageUrl = "/almonds.png";
+            let imageUrl = "/almonds.webp";
             let color = "from-[#D2B48C] to-[#8B6914]";
             
             try {
@@ -434,6 +292,37 @@ Let's craft the perfect custom hamper, evaluate your wellness needs, or answer q
     } catch (e) {
       console.error("Failed to add previous order items to cart:", e);
     }
+  };
+
+  // 7.6. Direct add to cart
+  const handleAddToCartDirectly = async (productId: number, weight: string, price: number) => {
+    let imageUrl = "/almonds.webp";
+    let color = "from-[#D2B48C] to-[#8B6914]";
+    let name = "Product";
+    
+    try {
+      const prodRes = await fetch(`${apiUrl}/api/products/${productId}`);
+      if (prodRes.ok) {
+        const prod = await prodRes.json();
+        imageUrl = prod.image_url || imageUrl;
+        color = prod.color || color;
+        name = prod.name || name;
+      }
+    } catch (e) {
+      console.warn("Could not fetch product details, using fallbacks:", e);
+    }
+    
+    addToCart(
+      {
+        id: productId,
+        name: name,
+        image_url: imageUrl,
+        color: color,
+      },
+      weight,
+      price,
+      true // open cart drawer
+    );
   };
 
   // 8. Rename Session Title
@@ -480,18 +369,60 @@ Let's craft the perfect custom hamper, evaluate your wellness needs, or answer q
   };
 
   const toggleListening = () => {
-    if (!recognitionRef.current) {
+    if (typeof window === "undefined") return;
+
+    const SpeechRecognition =
+      (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+
+    if (!SpeechRecognition) {
       alert("Speech recognition is not supported in this browser. Please try Google Chrome or Safari.");
       return;
     }
 
     if (isListening) {
-      recognitionRef.current.stop();
+      if (recognitionRef.current) {
+        try {
+          recognitionRef.current.stop();
+        } catch (e) {}
+      }
+      setIsListening(false);
     } else {
       try {
-        recognitionRef.current.start();
+        const rec = new SpeechRecognition();
+        rec.continuous = false;
+        rec.interimResults = false;
+        rec.lang = "en-US";
+
+        rec.onstart = () => {
+          setIsListening(true);
+        };
+
+        rec.onresult = (event: any) => {
+          const transcript = event.results[0][0].transcript;
+          setInputVal((prev) => (prev ? prev + " " + transcript : transcript));
+        };
+
+        rec.onerror = (e: any) => {
+          console.error("Speech Recognition Error:", e);
+          setIsListening(false);
+          if (e.error === "not-allowed") {
+            alert("Microphone access is blocked. Please enable microphone permissions in your browser settings to use speech-to-text.");
+          } else if (e.error === "no-speech") {
+            console.log("No speech detected.");
+          } else {
+            alert(`Speech recognition error: ${e.error}`);
+          }
+        };
+
+        rec.onend = () => {
+          setIsListening(false);
+        };
+
+        recognitionRef.current = rec;
+        rec.start();
       } catch (e) {
         console.error("Speech Recognition start failed:", e);
+        alert("Failed to start speech recognition. Please check your microphone connection.");
       }
     }
   };
@@ -636,6 +567,36 @@ Let's craft the perfect custom hamper, evaluate your wellness needs, or answer q
           handleAddLastOrderToCart();
         }
 
+        // Check for direct add to cart signal tags
+        // Match [ADD_TO_CART: <id>, weight: <weight>, price: <price>]
+        const cartTagRegex = /\[ADD_TO_CART:\s*(\d+),\s*weight:\s*([^,\]]+),\s*price:\s*(\d+)\]/gi;
+        let cartMatch;
+        let foundMatches = false;
+        
+        let cleanAssistantContent = assistantMessageContent;
+        while ((cartMatch = cartTagRegex.exec(assistantMessageContent)) !== null) {
+          const productId = parseInt(cartMatch[1]);
+          const weight = cartMatch[2].trim();
+          const price = parseInt(cartMatch[3]);
+          handleAddToCartDirectly(productId, weight, price);
+          foundMatches = true;
+        }
+
+        if (foundMatches) {
+          cleanAssistantContent = assistantMessageContent.replace(cartTagRegex, "").trim();
+          assistantMessageContent = cleanAssistantContent;
+          setMessages((prev) => {
+            const next = [...prev];
+            if (next.length > 0) {
+              next[next.length - 1] = {
+                role: "assistant",
+                content: cleanAssistantContent,
+              };
+            }
+            return next;
+          });
+        }
+
         // E. Persist assistant message in DB (if logged in)
         if (token && sessionId) {
           try {
@@ -746,13 +707,13 @@ Please diagnose my results and recommend a tailored luxury dry fruits selection 
   // Hamper Builder Add-to-Cart
   const handleAddHamperToCart = () => {
     const productsList = [
-      { id: 1, name: "Premium California Almonds", price: 279, image_url: "/almonds.png", color: "from-[#D2B48C] to-[#8B6914]" },
-      { id: 2, name: "Saffron Pistachios", price: 399, image_url: "/pistachios.png", color: "from-[#8B9467] to-[#556B2F]" },
-      { id: 3, name: "Royal Cashews W320", price: 299, image_url: "/cashews.png", color: "from-[#F5DEB3] to-[#D2691E]" },
-      { id: 4, name: "Medjool Dates", price: 289, image_url: "/dates.png", color: "from-[#8B4513] to-[#3D1F00]" },
-      { id: 5, name: "Turkish Figs", price: 379, image_url: "/figs.png", color: "from-[#7B3F8C] to-[#3d1a5c]" },
-      { id: 6, name: "Jumbo Raisins", price: 169, image_url: "/raisins.png", color: "from-[#722F37] to-[#3D0C11]" },
-      { id: 7, name: "Fox Nuts (Makhana)", price: 249, image_url: "/makhana.png", color: "from-[#F5F5DC] to-[#D2B48C]" },
+      { id: 1, name: "Premium California Almonds", price: 279, image_url: "/almonds.webp", color: "from-[#D2B48C] to-[#8B6914]" },
+      { id: 2, name: "Saffron Pistachios", price: 399, image_url: "/pistachios.webp", color: "from-[#8B9467] to-[#556B2F]" },
+      { id: 3, name: "Royal Cashews W320", price: 299, image_url: "/cashews.webp", color: "from-[#F5DEB3] to-[#D2691E]" },
+      { id: 4, name: "Medjool Dates", price: 289, image_url: "/dates.webp", color: "from-[#8B4513] to-[#3D1F00]" },
+      { id: 5, name: "Turkish Figs", price: 379, image_url: "/figs.webp", color: "from-[#7B3F8C] to-[#3d1a5c]" },
+      { id: 6, name: "Jumbo Raisins", price: 169, image_url: "/raisins.webp", color: "from-[#722F37] to-[#3D0C11]" },
+      { id: 7, name: "Fox Nuts (Makhana)", price: 249, image_url: "/makhana.webp", color: "from-[#F5F5DC] to-[#D2B48C]" },
     ];
 
     selectedHamperProducts.forEach((id) => {
@@ -779,16 +740,19 @@ Please diagnose my results and recommend a tailored luxury dry fruits selection 
   };
 
   // Inline markdown formatter: bold, italic, numbered lists markers
-  const applyInlineMarkdown = (text: string): string => {
+  const applyInlineMarkdown = React.useCallback((text: string): string => {
     return text
       .replace(/\*\*\*(.*?)\*\*\*/g, "<strong class='font-bold text-purple-950'>$1</strong>")
       .replace(/\*\*(.*?)\*\*/g, "<strong class='font-bold text-purple-950'>$1</strong>")
       .replace(/\*(.*?)\*/g, "<em class='italic text-purple-900/80'>$1</em>");
-  };
+  }, []);
 
   // Robust block-level markdown parser — never splits words across paragraphs
-  const renderMessageContent = (text: string) => {
-    const cleanedText = text.replace(/\[ADD_LAST_ORDER_TO_CART\]/gi, "").trim();
+  const renderMessageContent = React.useCallback((text: string) => {
+    const cleanedText = text
+      .replace(/\[ADD_LAST_ORDER_TO_CART\]/gi, "")
+      .replace(/\[ADD_TO_CART:\s*\d+,\s*weight:\s*[^,\]]+,\s*price:\s*\d+\]/gi, "")
+      .trim();
 
     // 1. Casing safeguard for all-caps AI responses
     const upperCount = (cleanedText.match(/[A-Z]/g) || []).length;
@@ -915,55 +879,81 @@ Please diagnose my results and recommend a tailored luxury dry fruits selection 
         }
       });
 
-      if (currentBlock) blocks.push(currentBlock);
+      if (currentBlock) {
+        blocks.push(currentBlock);
+      }
 
-      // 5. Render each block
+      // 5. Render semantic blocks to React elements
       blocks.forEach((block, blockIdx) => {
-        const key = `seg${groupIdx}-blk${blockIdx}`;
+        const key = `block-${blockIdx}`;
 
+        // Header
         if (block.type === "header") {
           const raw = block.content[0];
-          const headerText = raw.replace(/^#{1,3}\s+/, "");
-          elements.push(
-            <h3
-              key={key}
-              className="font-bold text-base md:text-[17px] tracking-wide text-purple-950 mt-5 mb-2 flex items-center gap-2"
-            >
-              <span className="w-1.5 h-4 bg-[#5b21b6] rounded-full inline-block flex-shrink-0" />
-              <span dangerouslySetInnerHTML={{ __html: applyInlineMarkdown(headerText) }} />
-            </h3>
-          );
+          let level = 3;
+          let titleText = raw.replace(/^###\s+/, "");
+          if (raw.startsWith("# ")) {
+            level = 1;
+            titleText = raw.replace(/^#\s+/, "");
+          } else if (raw.startsWith("## ")) {
+            level = 2;
+            titleText = raw.replace(/^##\s+/, "");
+          }
+
+          if (level === 1) {
+            elements.push(
+              <h1
+                key={key}
+                className="text-2xl md:text-3xl font-bold text-[#3d1a5c] mt-4 mb-2 tracking-tight"
+                dangerouslySetInnerHTML={{ __html: applyInlineMarkdown(titleText) }}
+              />
+            );
+          } else if (level === 2) {
+            elements.push(
+              <h2
+                key={key}
+                className="text-xl md:text-2xl font-bold text-[#3d1a5c] mt-3 mb-2 tracking-tight"
+                dangerouslySetInnerHTML={{ __html: applyInlineMarkdown(titleText) }}
+              />
+            );
+          } else {
+            elements.push(
+              <h3
+                key={key}
+                className="text-lg md:text-xl font-bold text-[#3d1a5c] mt-2 mb-1 tracking-tight"
+                dangerouslySetInnerHTML={{ __html: applyInlineMarkdown(titleText) }}
+              />
+            );
+          }
           return;
         }
 
+        // Bullet list
         if (block.type === "bullet") {
           elements.push(
-            <ul key={key} className="my-2 space-y-1.5 pl-1">
+            <ul key={key} className="list-disc list-inside space-y-1.5 mb-3 text-left pl-2">
               {block.content.map((item, itemIdx) => (
                 <li
-                  key={itemIdx}
-                  className="flex items-start gap-2 text-base text-slate-700 leading-relaxed"
-                >
-                  <span className="w-1.5 h-1.5 rounded-full bg-purple-500 mt-2.5 flex-shrink-0" />
-                  <span dangerouslySetInnerHTML={{ __html: applyInlineMarkdown(item) }} />
-                </li>
+                  key={`${key}-${itemIdx}`}
+                  className="text-base md:text-[17px] text-slate-800 leading-relaxed"
+                  dangerouslySetInnerHTML={{ __html: applyInlineMarkdown(item) }}
+                />
               ))}
             </ul>
           );
           return;
         }
 
+        // Numbered list
         if (block.type === "numbered") {
           elements.push(
-            <ol key={key} className="my-2 space-y-1.5 pl-1">
+            <ol key={key} className="list-decimal list-inside space-y-1.5 mb-3 text-left pl-2">
               {block.content.map((item, itemIdx) => (
                 <li
-                  key={itemIdx}
-                  className="flex items-start gap-2.5 text-base text-slate-700 leading-relaxed"
-                >
-                  <span className="font-bold text-purple-600 text-sm min-w-[18px] mt-0.5">{itemIdx + 1}.</span>
-                  <span dangerouslySetInnerHTML={{ __html: applyInlineMarkdown(item) }} />
-                </li>
+                  key={`${key}-${itemIdx}`}
+                  className="text-base md:text-[17px] text-slate-800 leading-relaxed"
+                  dangerouslySetInnerHTML={{ __html: applyInlineMarkdown(item) }}
+                />
               ))}
             </ol>
           );
@@ -984,7 +974,7 @@ Please diagnose my results and recommend a tailored luxury dry fruits selection 
     });
 
     return <>{elements}</>;
-  };
+  }, [applyInlineMarkdown]);
 
   return (
     <div className="flex w-full overflow-hidden bg-transparent" style={{ height: '100dvh' }}>
@@ -1008,7 +998,7 @@ Please diagnose my results and recommend a tailored luxury dry fruits selection 
         <div className="p-5 border-b border-purple-100/55 flex flex-col gap-4 bg-purple-50/20">
           <div className="flex items-center justify-center">
             <img
-              src="/kalindi.png"
+              src="/kalindi.webp"
               alt="Kalindi Logo"
               className="h-8 object-contain"
             />
@@ -1108,11 +1098,17 @@ Please diagnose my results and recommend a tailored luxury dry fruits selection 
           {user ? (
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <img
-                  src={user.picture}
-                  alt={user.name}
-                  className="w-10 h-10 rounded-full border border-amber-500/30 object-cover"
-                />
+                {user.picture && !user.picture.includes("unsplash.com") ? (
+                  <img
+                    src={user.picture}
+                    alt={user.name}
+                    className="w-10 h-10 rounded-full border border-amber-500/30 object-cover"
+                  />
+                ) : (
+                  <div className="w-10 h-10 rounded-full border border-amber-500/30 bg-gradient-to-tr from-[#3d1a5c] to-[#e91e8c] text-white font-bold text-base flex items-center justify-center select-none shadow-xs">
+                    {user.name ? user.name.charAt(0).toUpperCase() : "K"}
+                  </div>
+                )}
                 <div className="text-left">
                   <p className="font-bold text-xs text-slate-900 truncate max-w-[130px]">{user.name}</p>
                   <p className="text-[10px] text-purple-700 uppercase tracking-widest font-black">
@@ -1131,16 +1127,11 @@ Please diagnose my results and recommend a tailored luxury dry fruits selection 
           ) : (
             <div className="flex flex-col gap-2.5 py-1">
               <button
-                onClick={handleDemoSignIn}
-                className="w-full py-2.5 rounded-xl bg-[#3d1a5c] hover:bg-[#28113e] text-white text-[11px] font-extrabold uppercase tracking-wider flex items-center justify-center gap-1.5 transition-all shadow-md cursor-pointer hover:scale-102"
+                onClick={() => openLoginModal()}
+                className="w-full py-2.5 rounded-xl bg-[#3d1a5c] hover:bg-[#28113e] text-white text-xs font-extrabold uppercase tracking-wider flex items-center justify-center gap-2 transition-all shadow-md cursor-pointer hover:scale-[1.02] active:scale-[0.98]"
               >
-                <Sparkles className="w-3.5 h-3.5" /> Concierge Demo Sign-In
+                <LogIn className="w-4 h-4" /> Sign In to Concierge
               </button>
-              
-              {/* Google GSI Auth container */}
-              <div className="flex justify-center w-full scale-95 origin-center">
-                <div id="google-signin-button"></div>
-              </div>
             </div>
           )}
         </div>
@@ -1550,7 +1541,7 @@ Please diagnose my results and recommend a tailored luxury dry fruits selection 
               <div className="flex-1 flex flex-col items-center justify-center text-center my-auto max-w-xl mx-auto px-4 py-6">
                 <div className="mb-2 flex items-center justify-center">
                   <img
-                    src="/kalindi.png"
+                    src="/kalindi.webp"
                     alt="Kalindi Logo"
                     className="w-64 h-24 object-contain"
                   />
@@ -1584,29 +1575,11 @@ Please diagnose my results and recommend a tailored luxury dry fruits selection 
               </div>
             ) : (
               messages.map((msg, i) => (
-                <div
+                <ChatMessageItem
                   key={i}
-                  className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}
-                >
-                  <div
-                    className={`max-w-[85%] rounded-2xl p-4 md:p-5 border shadow-sm text-left ${
-                      msg.role === "user"
-                        ? "border-purple-200 text-purple-950 rounded-br-none font-medium"
-                        : "border-purple-100 rounded-bl-none text-slate-800"
-                    }`}
-                    style={{
-                      backgroundColor: msg.role === "user" ? "rgba(237,233,254,0.9)" : "rgba(255,255,255,0.95)"
-                    }}
-                  >
-                    {msg.role === "user" ? (
-                      <p className="text-base md:text-[17px] font-medium leading-relaxed text-purple-950">
-                        {msg.content}
-                      </p>
-                    ) : (
-                      renderMessageContent(msg.content)
-                    )}
-                  </div>
-                </div>
+                  msg={msg}
+                  renderMessageContent={renderMessageContent}
+                />
               ))
             )}
 
@@ -1665,5 +1638,38 @@ Please diagnose my results and recommend a tailored luxury dry fruits selection 
     </div>
   );
 }
+
+interface ChatMessageItemProps {
+  msg: Message;
+  renderMessageContent: (text: string) => React.ReactNode;
+}
+
+const ChatMessageItem = React.memo(({ msg, renderMessageContent }: ChatMessageItemProps) => {
+  return (
+    <div
+      className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}
+    >
+      <div
+        className={`max-w-[85%] rounded-2xl p-4 md:p-5 border shadow-sm text-left ${
+          msg.role === "user"
+            ? "border-purple-200 text-purple-950 rounded-br-none font-medium"
+            : "border-purple-100 rounded-bl-none text-slate-800"
+        }`}
+        style={{
+          backgroundColor: msg.role === "user" ? "rgba(237,233,254,0.9)" : "rgba(255,255,255,0.95)"
+        }}
+      >
+        {msg.role === "user" ? (
+          <p className="text-base md:text-[17px] font-medium leading-relaxed text-purple-950">
+            {msg.content}
+          </p>
+        ) : (
+          renderMessageContent(msg.content)
+        )}
+      </div>
+    </div>
+  );
+});
+ChatMessageItem.displayName = "ChatMessageItem";
 
 

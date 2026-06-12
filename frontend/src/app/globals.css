@@ -58,9 +58,8 @@ html.lenis, html.lenis body {
     content: "";
     position: fixed;
     inset: 0;
-    background-image: url(/background2.png) !important;
+    background-image: url(/background2.webp) !important;
     background-size: cover !important;
-    background-attachment: fixed !important;
     background-position: center !important;
     background-repeat: no-repeat !important;
     opacity: 0.12; /* Dull background image for maximum legibility */

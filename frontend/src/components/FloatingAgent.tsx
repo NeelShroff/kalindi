@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { useRouter, usePathname } from "next/navigation";
+import Image from "next/image";
 
 export default function FloatingAgent() {
   const router = useRouter();
@@ -42,12 +43,14 @@ export default function FloatingAgent() {
         onClick={() => router.push("/assistance")}
         whileHover={{ scale: 1.05 }}
         whileTap={{ scale: 0.95 }}
-        className="w-14 h-14 rounded-full flex items-center justify-center shadow-lg transition-all duration-300 border border-amber-500/30 bg-kalindi-purple overflow-hidden cursor-grab active:cursor-grabbing hover:border-amber-400"
+        className="w-14 h-14 rounded-full flex items-center justify-center shadow-lg transition-colors duration-300 border border-amber-500/30 bg-kalindi-purple overflow-hidden cursor-grab active:cursor-grabbing hover:border-amber-400"
         title="Open Luxury Concierge Assistance"
       >
-        <img
-          src="/chatbot1.png"
+        <Image
+          src="/chatbot1.webp"
           alt="Guest Assist"
+          width={56}
+          height={56}
           className="w-full h-full object-cover rounded-full select-none pointer-events-none"
         />
       </motion.button>

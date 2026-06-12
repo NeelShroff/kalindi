@@ -21,26 +21,15 @@ type FloatingProps = {
   scale: number;
 };
 
-function Almond({ position, rotation, scale }: FloatingProps) {
+const Almond = React.forwardRef<THREE.Group, FloatingProps>(({ position, rotation, scale }, ref) => {
   const { scene } = useGLTF("/almond.glb");
-  const groupRef = useRef<THREE.Group>(null!);
-
-  useFrame((state: any) => {
-    if (!groupRef.current) return;
-    groupRef.current.rotation.y += 0.003;
-    groupRef.current.position.y =
-      position[1] + Math.sin(state.clock.elapsedTime + position[0]) * 0.15;
-  });
-
   return (
-    <Float speed={2} rotationIntensity={0.8} floatIntensity={2}>
-      <group ref={groupRef} position={position} rotation={rotation} scale={scale}>
-        {/* We use clone() so we can have multiple almonds without material sharing issues */}
-        <primitive object={scene.clone()} />
-      </group>
-    </Float>
+    <group ref={ref} position={position} rotation={rotation} scale={scale}>
+      <primitive object={scene.clone()} />
+    </group>
   );
-}
+});
+Almond.displayName = "Almond";
 
 function Lotus({
   position,
@@ -144,45 +133,25 @@ function Pistachio({ position, rotation, scale }: FloatingProps) {
   );
 }
 
-function Cashew({ position, rotation, scale }: FloatingProps) {
+const Cashew = React.forwardRef<THREE.Group, FloatingProps>(({ position, rotation, scale }, ref) => {
   const { scene } = useGLTF("/cashew.glb");
-  const groupRef = useRef<THREE.Group>(null!);
-
-  useFrame((state: any) => {
-    if (!groupRef.current) return;
-    groupRef.current.rotation.y -= 0.004;
-    groupRef.current.position.y =
-      position[1] + Math.cos(state.clock.elapsedTime * 0.8 + position[2]) * 0.2;
-  });
-
   return (
-    <Float speed={2.5} rotationIntensity={1} floatIntensity={2.5}>
-      <group ref={groupRef} position={position} rotation={rotation} scale={scale}>
-        <primitive object={scene.clone()} />
-      </group>
-    </Float>
+    <group ref={ref} position={position} rotation={rotation} scale={scale}>
+      <primitive object={scene.clone()} />
+    </group>
   );
-}
+});
+Cashew.displayName = "Cashew";
 
-function Walnut({ position, rotation, scale }: FloatingProps) {
+const Walnut = React.forwardRef<THREE.Group, FloatingProps>(({ position, rotation, scale }, ref) => {
   const { scene } = useGLTF("/walnut.glb");
-  const groupRef = useRef<THREE.Group>(null!);
-
-  useFrame((state: any) => {
-    if (!groupRef.current) return;
-    groupRef.current.rotation.y += 0.003;
-    groupRef.current.position.y =
-      position[1] + Math.sin(state.clock.elapsedTime + position[0]) * 0.15;
-  });
-
   return (
-    <Float speed={1.8} rotationIntensity={0.8} floatIntensity={2}>
-      <group ref={groupRef} position={position} rotation={rotation} scale={scale}>
-        <primitive object={scene.clone()} />
-      </group>
-    </Float>
+    <group ref={ref} position={position} rotation={rotation} scale={scale}>
+      <primitive object={scene.clone()} />
+    </group>
   );
-}
+});
+Walnut.displayName = "Walnut";
 
 
 
@@ -203,6 +172,84 @@ function Scene({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  const almondsData = useMemo(() => [
+    { pos: [isMobile ? -1.8 : -3.5, 1, 0.5], rot: [0.2, 0.5, 0], scale: isMobile ? 0.009 : 0.015 },
+    { pos: [isMobile ? -2.2 : -4.2, -1.5, 1], rot: [0.3, 0.2, 0], scale: isMobile ? 0.007 : 0.012 },
+    { pos: [isMobile ? -1.5 : -2.8, 2.5, -1.5], rot: [0.5, 0.1, 0.4], scale: isMobile ? 0.008 : 0.014 },
+    { pos: [isMobile ? -2.3 : -4.5, -0.2, 0.5], rot: [0.6, 0.1, 0.2], scale: isMobile ? 0.006 : 0.01 },
+    { pos: [isMobile ? -1.6 : -3.0, -2.5, 1.0], rot: [0.4, 0.2, 0.7], scale: isMobile ? 0.009 : 0.015 },
+    { pos: [isMobile ? 1.6 : 3.2, -1.2, 1], rot: [0.3, 0.2, 0], scale: isMobile ? 0.007 : 0.012 },
+    { pos: [isMobile ? 2.2 : 4.5, 3.0, 0.5], rot: [0.1, 0.6, 0.2], scale: isMobile ? 0.006 : 0.01 },
+    { pos: [isMobile ? 1.8 : 4.0, -0.5, -2.0], rot: [0.7, 0.3, 0.1], scale: isMobile ? 0.008 : 0.014 },
+    { pos: [isMobile ? 1.7 : 3.8, 1.5, 0.3], rot: [0.1, 0.7, 0.5], scale: isMobile ? 0.006 : 0.011 },
+    { pos: [isMobile ? 1.6 : 3.5, -2.5, -0.5], rot: [0.2, 0.5, 0], scale: isMobile ? 0.007 : 0.013 },
+  ], [isMobile]);
+
+  const cashewsData = useMemo(() => [
+    { pos: [isMobile ? -2.1 : -4.5, -3, 2], rot: [0.3, 0.1, 0.5], scale: isMobile ? 0.21 : 0.35 },
+    { pos: [isMobile ? -1.6 : -3.2, 0.5, -2.5], rot: [0.5, 0.8, 0.1], scale: isMobile ? 0.18 : 0.3 },
+    { pos: [isMobile ? -1.3 : -2.5, -1.5, -1.0], rot: [0.6, 0.2, 0.4], scale: isMobile ? 0.16 : 0.28 },
+    { pos: [isMobile ? -1.9 : -3.8, 2.0, 0.5], rot: [0.4, 0.3, 0.8], scale: isMobile ? 0.2 : 0.34 },
+    { pos: [isMobile ? 2.0 : 4.2, 3, -2], rot: [0.1, 0.4, 0.2], scale: isMobile ? 0.18 : 0.3 },
+    { pos: [isMobile ? 1.7 : 3.5, 1.5, 1.5], rot: [0.2, 0.5, 0.8], scale: isMobile ? 0.21 : 0.35 },
+    { pos: [isMobile ? 1.5 : 3.0, -2.5, 2.0], rot: [0.1, 0.7, 0.3], scale: isMobile ? 0.15 : 0.25 },
+    { pos: [isMobile ? 2.2 : 4.5, -1.0, -0.4], rot: [0.8, 0.1, 0.3], scale: isMobile ? 0.19 : 0.32 },
+  ], [isMobile]);
+
+  const walnutsData = useMemo(() => [
+    { pos: [isMobile ? -1.8 : -3.8, 0, -1], rot: [0.4, 0.2, 0.1], scale: isMobile ? 5.0 : 9.0 },
+    { pos: [isMobile ? -1.3 : -2.6, -2, 0.8], rot: [0.1, 0.5, 0.3], scale: isMobile ? 5.0 : 9.0 },
+    { pos: [isMobile ? -1.9 : -4.0, 2.2, -0.5], rot: [0.3, 0.1, 0.6], scale: isMobile ? 4.5 : 8.0 },
+    { pos: [isMobile ? 1.7 : 3.6, -0.8, -0.5], rot: [0.2, 0.3, 0.4], scale: isMobile ? 5.0 : 9.0 },
+    { pos: [isMobile ? 1.4 : 2.8, 2, -1.5], rot: [0.5, 0.1, 0.2], scale: isMobile ? 5.0 : 9.0 },
+    { pos: [isMobile ? 2.0 : 4.2, -2.2, 0.5], rot: [0.1, 0.6, 0.3], scale: isMobile ? 4.5 : 8.0 },
+  ], [isMobile]);
+
+  const displayAlmonds = almondsData;
+  const displayCashews = cashewsData;
+  const displayWalnuts = walnutsData;
+
+  const almondRefs = useRef<(THREE.Group | null)[]>([]);
+  const cashewRefs = useRef<(THREE.Group | null)[]>([]);
+  const walnutRefs = useRef<(THREE.Group | null)[]>([]);
+
+  useFrame((state) => {
+    const time = state.clock.elapsedTime;
+
+    // 1. Animate Almonds
+    almondRefs.current.forEach((ref, i) => {
+      if (!ref) return;
+      const data = displayAlmonds[i];
+      if (!data) return;
+      ref.rotation.y += 0.003;
+      ref.position.y = data.pos[1] + Math.sin(time * 2.0 + data.pos[0]) * 0.15;
+      ref.rotation.x = data.rot[0] + Math.sin(time * 1.5 + i) * 0.05;
+      ref.rotation.z = data.rot[2] + Math.cos(time * 1.5 + i) * 0.05;
+    });
+
+    // 2. Animate Cashews
+    cashewRefs.current.forEach((ref, i) => {
+      if (!ref) return;
+      const data = displayCashews[i];
+      if (!data) return;
+      ref.rotation.y -= 0.004;
+      ref.position.y = data.pos[1] + Math.cos(time * 1.6 + data.pos[2]) * 0.15;
+      ref.rotation.x = data.rot[0] + Math.sin(time * 1.2 + i) * 0.05;
+      ref.rotation.z = data.rot[2] + Math.cos(time * 1.2 + i) * 0.05;
+    });
+
+    // 3. Animate Walnuts
+    walnutRefs.current.forEach((ref, i) => {
+      if (!ref) return;
+      const data = displayWalnuts[i];
+      if (!data) return;
+      ref.rotation.y += 0.003;
+      ref.position.y = data.pos[1] + Math.sin(time * 1.8 + data.pos[0]) * 0.15;
+      ref.rotation.x = data.rot[0] + Math.sin(time * 1.0 + i) * 0.05;
+      ref.rotation.z = data.rot[2] + Math.cos(time * 1.0 + i) * 0.05;
+    });
+  });
+
   return (
     <>
       {/* Fog to fade out items at a distance */}
@@ -214,41 +261,44 @@ function Scene({
       <pointLight position={[-5, 3, 4]} intensity={1.5} color="#e91e8c" />
       <pointLight position={[0, -3, -5]} intensity={1} color="#f472b6" />
 
-      {/* Almonds scattered on the LEFT */}
-      <Almond position={[isMobile ? -1.8 : -3.5, 1, 0.5]} rotation={[0.2, 0.5, 0]} scale={isMobile ? 0.009 : 0.015} />
-      <Almond position={[isMobile ? -2.2 : -4.2, -1.5, 1]} rotation={[0.3, 0.2, 0]} scale={isMobile ? 0.007 : 0.012} />
-      <Almond position={[isMobile ? -1.5 : -2.8, 2.5, -1.5]} rotation={[0.5, 0.1, 0.4]} scale={isMobile ? 0.008 : 0.014} />
-      <Almond position={[isMobile ? -2.3 : -4.5, -0.2, 0.5]} rotation={[0.6, 0.1, 0.2]} scale={isMobile ? 0.006 : 0.01} />
-      <Almond position={[isMobile ? -1.6 : -3.0, -2.5, 1.0]} rotation={[0.4, 0.2, 0.7]} scale={isMobile ? 0.009 : 0.015} />
+      {/* Almonds scattered */}
+      {displayAlmonds.map((data, idx) => (
+        <Almond
+          key={`almond-${idx}`}
+          ref={(el) => {
+            almondRefs.current[idx] = el;
+          }}
+          position={data.pos as [number, number, number]}
+          rotation={data.rot as [number, number, number]}
+          scale={data.scale}
+        />
+      ))}
 
-      {/* Almonds scattered on the RIGHT */}
-      <Almond position={[isMobile ? 1.6 : 3.2, -1.2, 1]} rotation={[0.3, 0.2, 0]} scale={isMobile ? 0.007 : 0.012} />
-      <Almond position={[isMobile ? 2.2 : 4.5, 3.0, 0.5]} rotation={[0.1, 0.6, 0.2]} scale={isMobile ? 0.006 : 0.01} />
-      <Almond position={[isMobile ? 1.8 : 4.0, -0.5, -2.0]} rotation={[0.7, 0.3, 0.1]} scale={isMobile ? 0.008 : 0.014} />
-      <Almond position={[isMobile ? 1.7 : 3.8, 1.5, 0.3]} rotation={[0.1, 0.7, 0.5]} scale={isMobile ? 0.006 : 0.011} />
-      <Almond position={[isMobile ? 1.6 : 3.5, -2.5, -0.5]} rotation={[0.2, 0.5, 0]} scale={isMobile ? 0.007 : 0.013} />
+      {/* Cashews scattered */}
+      {displayCashews.map((data, idx) => (
+        <Cashew
+          key={`cashew-${idx}`}
+          ref={(el) => {
+            cashewRefs.current[idx] = el;
+          }}
+          position={data.pos as [number, number, number]}
+          rotation={data.rot as [number, number, number]}
+          scale={data.scale}
+        />
+      ))}
 
-      {/* Cashews scattered on the LEFT */}
-      <Cashew position={[isMobile ? -2.1 : -4.5, -3, 2]} rotation={[0.3, 0.1, 0.5]} scale={isMobile ? 0.21 : 0.35} />
-      <Cashew position={[isMobile ? -1.6 : -3.2, 0.5, -2.5]} rotation={[0.5, 0.8, 0.1]} scale={isMobile ? 0.18 : 0.3} />
-      <Cashew position={[isMobile ? -1.3 : -2.5, -1.5, -1.0]} rotation={[0.6, 0.2, 0.4]} scale={isMobile ? 0.16 : 0.28} />
-      <Cashew position={[isMobile ? -1.9 : -3.8, 2.0, 0.5]} rotation={[0.4, 0.3, 0.8]} scale={isMobile ? 0.2 : 0.34} />
-
-      {/* Cashews scattered on the RIGHT */}
-      <Cashew position={[isMobile ? 2.0 : 4.2, 3, -2]} rotation={[0.1, 0.4, 0.2]} scale={isMobile ? 0.18 : 0.3} />
-      <Cashew position={[isMobile ? 1.7 : 3.5, 1.5, 1.5]} rotation={[0.2, 0.5, 0.8]} scale={isMobile ? 0.21 : 0.35} />
-      <Cashew position={[isMobile ? 1.5 : 3.0, -2.5, 2.0]} rotation={[0.1, 0.7, 0.3]} scale={isMobile ? 0.15 : 0.25} />
-      <Cashew position={[isMobile ? 2.2 : 4.5, -1.0, -0.4]} rotation={[0.8, 0.1, 0.3]} scale={isMobile ? 0.19 : 0.32} />
-
-      {/* Walnuts scattered on the LEFT */}
-      <Walnut position={[isMobile ? -1.8 : -3.8, 0, -1]} rotation={[0.4, 0.2, 0.1]} scale={isMobile ? 5.0 : 9.0} />
-      <Walnut position={[isMobile ? -1.3 : -2.6, -2, 0.8]} rotation={[0.1, 0.5, 0.3]} scale={isMobile ? 5.0 : 9.0} />
-      <Walnut position={[isMobile ? -1.9 : -4.0, 2.2, -0.5]} rotation={[0.3, 0.1, 0.6]} scale={isMobile ? 4.5 : 8.0} />
-
-      {/* Walnuts scattered on the RIGHT */}
-      <Walnut position={[isMobile ? 1.7 : 3.6, -0.8, -0.5]} rotation={[0.2, 0.3, 0.4]} scale={isMobile ? 5.0 : 9.0} />
-      <Walnut position={[isMobile ? 1.4 : 2.8, 2, -1.5]} rotation={[0.5, 0.1, 0.2]} scale={isMobile ? 5.0 : 9.0} />
-      <Walnut position={[isMobile ? 2.0 : 4.2, -2.2, 0.5]} rotation={[0.1, 0.6, 0.3]} scale={isMobile ? 4.5 : 8.0} />
+      {/* Walnuts scattered */}
+      {displayWalnuts.map((data, idx) => (
+        <Walnut
+          key={`walnut-${idx}`}
+          ref={(el) => {
+            walnutRefs.current[idx] = el;
+          }}
+          position={data.pos as [number, number, number]}
+          rotation={data.rot as [number, number, number]}
+          scale={data.scale}
+        />
+      ))}
 
       {/* Interactive Lotus below the logo in the center */}
       <Lotus position={[0, isMobile ? -0.5 : -1, 0]} rotation={[0, 0, 0]} scale={isMobile ? 0.024 : 0.032} logoRef={logoRef} />
@@ -272,10 +322,12 @@ function Scene({
 
 export default function KalindiHero() {
   const logoRef = useRef<HTMLDivElement>(null);
+  const sectionRef = useRef<HTMLElement>(null);
   const [isLoaded, setIsLoaded] = useState(false);
   const [mounted, setMounted] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
   const [controlDom, setControlDom] = useState<HTMLDivElement | null>(null);
+  const [isInView, setIsInView] = useState(true);
   const handleLoaded = useMemo(() => () => setIsLoaded(true), []);
 
   useEffect(() => {
@@ -286,6 +338,18 @@ export default function KalindiHero() {
     };
     handleResize();
     window.addEventListener("resize", handleResize);
+    
+    // Intersection Observer to track if the hero is in view
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        setIsInView(entry.isIntersecting);
+      },
+      { threshold: 0, rootMargin: "200px" } // Pre-load 200px before scrolling in
+    );
+
+    if (sectionRef.current) {
+      observer.observe(sectionRef.current);
+    }
     
     // Suppress harmless Three.js WebGL and Clock warnings to keep the console clean
     const originalWarn = console.warn;
@@ -298,22 +362,30 @@ export default function KalindiHero() {
     
     return () => {
       window.removeEventListener("resize", handleResize);
+      if (sectionRef.current) {
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+        observer.unobserve(sectionRef.current);
+      }
+      observer.disconnect();
       console.warn = originalWarn;
     };
   }, []);
 
   return (
-    <section className="relative h-[120vh] md:h-[140vh] w-full overflow-hidden bg-transparent">
+    <section ref={sectionRef} className="relative h-[120vh] md:h-[140vh] w-full overflow-hidden bg-transparent">
       {/* 3D Canvas wrapper to ensure absolute positioning and correct R3F size */}
       <div className="absolute inset-0 w-full h-full z-0 pointer-events-none">
         {mounted && (
           <Canvas
             camera={{ position: [0, 4, isMobile ? 8.5 : 6.928], fov: isMobile ? 50 : 45 }}
-            gl={{ antialias: true }}
+            gl={{ antialias: true, powerPreference: "high-performance" }}
+            dpr={isMobile ? [1, 1.2] : [1, 1.5]}
           >
-            <Suspense fallback={null}>
-              <Scene logoRef={logoRef} onLoaded={handleLoaded} isMobile={isMobile} controlDom={controlDom} />
-            </Suspense>
+            {isInView && (
+              <Suspense fallback={null}>
+                <Scene logoRef={logoRef} onLoaded={handleLoaded} isMobile={isMobile} controlDom={controlDom} />
+              </Suspense>
+            )}
           </Canvas>
         )}
       </div>
@@ -334,7 +406,7 @@ export default function KalindiHero() {
           initial={{ opacity: 0, y: -150, x: "-50%" }}
           animate={isLoaded ? { opacity: 1, y: 0, x: "-50%" } : { opacity: 0, y: -150, x: "-50%" }}
           transition={{ duration: 1.5, delay: 0.3, ease: "easeOut" }}
-          className="absolute top-24 left-1/2 w-full max-w-[310px] md:max-w-[580px] flex justify-center"
+          className="absolute top-32 md:top-24 left-1/2 w-full max-w-[310px] md:max-w-[580px] flex justify-center"
         >
           {/* Inner wrapper to synchronize float motion directly from the R3F loop */}
           <div
@@ -343,7 +415,7 @@ export default function KalindiHero() {
             className="w-full flex justify-center"
           >
             <Image
-              src="/kalindi.png"
+              src="/kalindi.webp"
               alt="Kalindi"
               width={700}
               height={200}
