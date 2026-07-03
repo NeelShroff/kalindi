@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { Canvas } from "@react-three/fiber";
 import { Float, Environment, ContactShadows, PresentationControls, Sparkles } from "@react-three/drei";
+import { checkWebGLSupport } from "../lib/utils";
 
 function GiftBox({ isMobile }: { isMobile: boolean }) {
   const scale = isMobile ? 0.6 : 1.0;
@@ -43,8 +44,10 @@ function Nut({ position, scale, color }: { position: [number, number, number], s
 
 export default function ThreeScene() {
   const [isMobile, setIsMobile] = useState(false);
+  const [hasWebGL, setHasWebGL] = useState(true);
 
   useEffect(() => {
+    setHasWebGL(checkWebGLSupport());
     const handleResize = () => {
       setIsMobile(window.innerWidth < 768);
     };
@@ -52,6 +55,12 @@ export default function ThreeScene() {
     window.addEventListener("resize", handleResize);
     return () => window.removeEventListener("resize", handleResize);
   }, []);
+
+  if (!hasWebGL) {
+    return (
+      <div className="fixed inset-0 z-[-1] pointer-events-none bg-[#0d0a14] bg-[radial-gradient(circle_at_center,_#1a102f_0%,_#0d0a14_100%)]" />
+    );
+  }
 
   return (
     <div className="fixed inset-0 z-[-1] pointer-events-none">

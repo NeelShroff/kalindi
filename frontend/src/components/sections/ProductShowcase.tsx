@@ -10,6 +10,7 @@ interface Product {
   id: number;
   name: string;
   description?: string;
+  price_100g?: number | null;
   price_250g: number | null;
   price_500g: number | null;
   price_1000g: number | null;

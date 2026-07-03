@@ -27,12 +27,12 @@ const reasons = [
   },
   {
     icon: Heart,
-    title: "Loved by 50,000+",
+    title: "Loved by 100+",
     desc: "A community of wellness-conscious families who trust Kalindi for daily nourishment.",
   },
   {
     icon: Star,
-    title: "Luxury Packaging",
+    title: "Premium Packing",
     desc: "Premium packaging that makes every box a gift-worthy experience, every time.",
   },
 ];

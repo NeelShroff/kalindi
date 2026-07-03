@@ -2,9 +2,28 @@
 
 import React, { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { X, Trash2, Plus, Minus, ArrowRight, ArrowLeft, ShoppingBag, Sparkles, CheckCircle, Lock } from "lucide-react";
+import { X, Trash2, Plus, Minus, ArrowRight, ArrowLeft, ShoppingBag, Sparkles, CheckCircle, Lock, CreditCard, Truck } from "lucide-react";
 import { useCart } from "@/context/CartContext";
 import { useAuth } from "@/context/AuthContext";
+import { getFallbackImage } from "@/lib/utils";
+
+const parseStoredAddress = (addressStr: string) => {
+  if (!addressStr) return { street: "", city: "", state: "", pincode: "" };
+  
+  const pinMatch = addressStr.match(/(?:-\s*)?(\d{6})$/);
+  if (pinMatch) {
+    const pincode = pinMatch[1];
+    const mainPart = addressStr.substring(0, pinMatch.index).replace(/,\s*-\s*$/, '').trim();
+    const parts = mainPart.split(',').map(s => s.trim()).filter(Boolean);
+    if (parts.length >= 2) {
+      const state = parts.pop() || "";
+      const city = parts.pop() || "";
+      const street = parts.join(', ');
+      return { street, city, state, pincode };
+    }
+  }
+  return { street: addressStr, city: "", state: "", pincode: "" };
+};
 
 export default function CartDrawer() {
   const {
@@ -18,11 +37,12 @@ export default function CartDrawer() {
     setIsCartOpen,
   } = useCart();
   
-  const { user, updateUser } = useAuth();
+  const { user, updateUser, openLoginModal } = useAuth();
 
   const [step, setStep] = useState<"cart" | "checkout" | "success">("cart");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [orderId, setOrderId] = useState<number | null>(null);
+  const [paymentMethod, setPaymentMethod] = useState<"online" | "cod">("online");
   
   // Checkout Form State
   const [form, setForm] = useState({
@@ -33,6 +53,63 @@ export default function CartDrawer() {
   });
   
   const [errors, setErrors] = useState<Record<string, string>>({});
+
+  // Structured Address States
+  const [streetAddress, setStreetAddress] = useState("");
+  const [pincode, setPincode] = useState("");
+  const [city, setCity] = useState("");
+  const [state, setState] = useState("");
+  const [isPincodeValidating, setIsPincodeValidating] = useState(false);
+  const [pincodeError, setPincodeError] = useState("");
+  const [isPincodeValid, setIsPincodeValid] = useState(false);
+  const [addressValidationError, setAddressValidationError] = useState("");
+
+  // Coupon Code State
+  const [couponCode, setCouponCode] = useState("");
+  const [appliedCoupon, setAppliedCoupon] = useState<string | null>(null);
+  const [couponError, setCouponError] = useState<string | null>(null);
+  const [couponSuccess, setCouponSuccess] = useState<string | null>(null);
+  const [isValidatingCoupon, setIsValidatingCoupon] = useState(false);
+  const [isManuallyRemoved, setIsManuallyRemoved] = useState(false);
+
+  // Auto-apply FIRST7 for first order if subtotal >= 1500
+  React.useEffect(() => {
+    const autoApply = async () => {
+      // If already applied, or manually removed, or subtotal is less than 1500, do nothing
+      if (appliedCoupon || cartTotal < 1500 || isManuallyRemoved) {
+        return;
+      }
+
+      // If user is logged in, we check if they are eligible
+      if (user && user.email) {
+        try {
+          const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:8088';
+          const res = await fetch(`${apiUrl}/api/orders/last?email=${encodeURIComponent(user.email)}`);
+          if (res.ok) {
+            const lastOrder = await res.json();
+            // If they have previous orders in progress or completed, they are NOT eligible
+            if (["processing", "shipped", "completed"].includes(lastOrder.status)) {
+              return;
+            }
+          }
+        } catch (err) {
+          console.error("Error checking eligibility for auto-apply:", err);
+        }
+      }
+
+      // Apply the coupon
+      setAppliedCoupon("FIRST7");
+      setCouponSuccess(user ? "Promo code FIRST7 applied automatically!" : "Promo code FIRST7 applied automatically! (Will be verified at checkout)");
+      setCouponError(null);
+    };
+
+    autoApply();
+  }, [cartTotal, user, appliedCoupon, isManuallyRemoved]);
+
+  // Reset manually removed state when cartTotal changes (e.g. user adds/removes items)
+  React.useEffect(() => {
+    setIsManuallyRemoved(false);
+  }, [cartTotal]);
 
   // Auto-fill checkout fields if user profile is loaded
   React.useEffect(() => {
@@ -46,6 +123,154 @@ export default function CartDrawer() {
       }));
     }
   }, [step, user]);
+
+  // Sync structured address states when form.address changes
+  React.useEffect(() => {
+    if (step === "checkout") {
+      const addressToParse = form.address || "";
+      if (addressToParse) {
+        const parsed = parseStoredAddress(addressToParse);
+        setStreetAddress(parsed.street);
+        setPincode(parsed.pincode);
+        setCity(parsed.city);
+        setState(parsed.state);
+        if (parsed.pincode && parsed.pincode.length === 6) {
+          setIsPincodeValid(true);
+          setPincodeError("");
+        }
+      }
+    }
+  }, [step, form.address]);
+
+  const handlePincodeInputChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const val = e.target.value.replace(/\D/g, "").slice(0, 6);
+    setPincode(val);
+    setIsPincodeValid(false);
+    
+    if (errors.pincode) {
+      setErrors(prev => ({ ...prev, pincode: "" }));
+    }
+
+    if (val.length === 6) {
+      setIsPincodeValidating(true);
+      setPincodeError("");
+      try {
+        const res = await fetch(`https://api.postalpincode.in/pincode/${val}`);
+        if (res.ok) {
+          const data = await res.json();
+          if (data && data[0] && data[0].Status === "Success" && data[0].PostOffice && data[0].PostOffice.length > 0) {
+            const postOffice = data[0].PostOffice[0];
+            setCity(postOffice.District || postOffice.Block || "");
+            setState(postOffice.State || "");
+            setIsPincodeValid(true);
+            setPincodeError("");
+          } else {
+            setPincodeError("Invalid Indian PIN code. Please enter a valid 6-digit code.");
+            setErrors(prev => ({ ...prev, pincode: "Invalid Indian PIN code." }));
+          }
+        } else {
+          setPincodeError("Could not verify PIN code. Please check and try again.");
+          setErrors(prev => ({ ...prev, pincode: "Could not verify PIN code." }));
+        }
+      } catch (err) {
+        console.error("PIN Code validation error:", err);
+        // Fallback: allow manual entry if API is offline
+        setPincodeError("");
+        setIsPincodeValid(true);
+      } finally {
+        setIsPincodeValidating(false);
+      }
+    } else {
+      setCity("");
+      setState("");
+    }
+  };
+
+  // Validate coupon automatically if user logs in after applying it
+  React.useEffect(() => {
+    const validateCouponOnLogin = async () => {
+      if (appliedCoupon === "FIRST7" && user && user.email) {
+        setIsValidatingCoupon(true);
+        try {
+          const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:8088';
+          const res = await fetch(`${apiUrl}/api/orders/last?email=${encodeURIComponent(user.email)}`);
+          if (res.ok) {
+            const lastOrder = await res.json();
+            if (["processing", "shipped", "completed"].includes(lastOrder.status)) {
+              setAppliedCoupon(null);
+              setCouponError("FIRST7 is only valid for your first order.");
+              setCouponSuccess(null);
+            } else {
+              setCouponSuccess("Promo code FIRST7 applied successfully!");
+              setCouponError(null);
+            }
+          } else if (res.status === 404) {
+            setCouponSuccess("Promo code FIRST7 applied successfully!");
+            setCouponError(null);
+          }
+        } catch (err) {
+          console.error("Error validating coupon eligibility:", err);
+        } finally {
+          setIsValidatingCoupon(false);
+        }
+      }
+    };
+    validateCouponOnLogin();
+  }, [user, appliedCoupon]);
+
+  // Remove coupon if subtotal falls below ₹1,500
+  React.useEffect(() => {
+    if (appliedCoupon === "FIRST7" && cartTotal < 1500) {
+      setAppliedCoupon(null);
+      setCouponSuccess(null);
+      setCouponError("Coupon FIRST7 removed. Minimum order value of ₹1,500 required.");
+    }
+  }, [cartTotal, appliedCoupon]);
+
+  const handleApplyCoupon = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setCouponError(null);
+    setCouponSuccess(null);
+    const code = couponCode.trim().toUpperCase();
+
+    if (!code) {
+      setCouponError("Please enter a coupon code.");
+      return;
+    }
+
+    if (code !== "FIRST7") {
+      setCouponError("Invalid coupon code.");
+      return;
+    }
+
+    if (cartTotal < 1500) {
+      setCouponError("Minimum order value of ₹1,500 required for FIRST7.");
+      return;
+    }
+
+    if (user && user.email) {
+      setIsValidatingCoupon(true);
+      try {
+        const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:8088';
+        const res = await fetch(`${apiUrl}/api/orders/last?email=${encodeURIComponent(user.email)}`);
+        if (res.ok) {
+          const lastOrder = await res.json();
+          if (["processing", "shipped", "completed"].includes(lastOrder.status)) {
+            setCouponError("FIRST7 is only valid for your first order.");
+            setIsValidatingCoupon(false);
+            return;
+          }
+        }
+      } catch (err) {
+        console.error("Error validating coupon eligibility:", err);
+      } finally {
+        setIsValidatingCoupon(false);
+      }
+    }
+
+    setAppliedCoupon(code);
+    setCouponSuccess(user ? "Promo code FIRST7 applied successfully!" : "Promo code FIRST7 applied! (Will be verified at checkout)");
+  };
 
   // Prevent body scrolling when Cart is open
   React.useEffect(() => {
@@ -84,7 +309,14 @@ export default function CartDrawer() {
       newErrors.phone = "Phone number is invalid (must be 10-12 digits)";
     }
     
-    if (!form.address.trim()) newErrors.address = "Shipping Address is required";
+    if (!streetAddress.trim()) {
+      newErrors.streetAddress = "Street Address is required";
+    }
+    if (!pincode.trim()) {
+      newErrors.pincode = "PIN Code is required";
+    } else if (pincode.length !== 6 || !isPincodeValid) {
+      newErrors.pincode = pincodeError || "Valid 6-digit PIN Code is required";
+    }
     
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
@@ -105,6 +337,45 @@ export default function CartDrawer() {
     if (!validateForm()) return;
     
     setIsSubmitting(true);
+    setAddressValidationError("");
+    
+    const shippingAddress = `${streetAddress.trim()}, ${city.trim()}, ${state.trim()} - ${pincode.trim()}`;
+    const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:8088';
+
+    // AI-Powered Address Validation
+    try {
+      const valRes = await fetch(`${apiUrl}/api/orders/validate-address`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ address: shippingAddress }),
+      });
+
+      if (valRes.ok) {
+        const valData = await valRes.json();
+        if (!valData.is_valid) {
+          const missingMsg = valData.missing_parts.join(", ");
+          setAddressValidationError(
+            `Address incomplete. Missing details: ${missingMsg}. Please specify flat/house number and building details.`
+          );
+          setIsSubmitting(false);
+          return;
+        }
+        // If valid, use the suggested address layout if available
+        if (valData.suggested_address) {
+          const parsed = parseStoredAddress(valData.suggested_address);
+          if (parsed.street) setStreetAddress(parsed.street);
+          if (parsed.city) setCity(parsed.city);
+          if (parsed.state) setState(parsed.state);
+        }
+      }
+    } catch (err) {
+      console.error("Address validation failed, falling back to client-side validation:", err);
+    }
+    
+    // Update local form state for consistency across callbacks
+    setForm((prev) => ({ ...prev, address: shippingAddress }));
     
     // Prepare payload
     const orderItems = cartItems.map((item) => ({
@@ -119,8 +390,10 @@ export default function CartDrawer() {
       customer_name: form.name,
       customer_email: form.email,
       customer_phone: form.phone,
-      shipping_address: form.address,
-      total_amount: cartTotal + (cartTotal >= 499 ? 0 : 60), // Add shipping if total < ₹499
+      shipping_address: shippingAddress,
+      total_amount: grandTotal,
+      discount_code: appliedCoupon,
+      payment_method: paymentMethod,
       items: orderItems,
     };
 
@@ -135,10 +408,27 @@ export default function CartDrawer() {
       });
 
       if (!response.ok) {
-        throw new Error("Failed to place order");
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.detail || "Failed to place order");
       }
 
       const orderData = await response.json();
+      
+      // Direct success for Cash on Delivery (COD) orders
+      if (paymentMethod === "cod") {
+        setOrderId(orderData.id);
+        clearCart();
+        setStep("success");
+        if (user) {
+          updateUser({
+            ...user,
+            phone: form.phone,
+            address: shippingAddress
+          });
+        }
+        setIsSubmitting(false);
+        return;
+      }
       
       // Auto-simulate mock payment if in demo/local mode without credentials
       if (orderData.razorpay_order_id.startsWith("order_mock_")) {
@@ -168,7 +458,7 @@ export default function CartDrawer() {
               updateUser({
                 ...user,
                 phone: form.phone,
-                address: form.address
+                address: shippingAddress
               });
             }
           } catch (verifyErr) {
@@ -193,7 +483,7 @@ export default function CartDrawer() {
 
       const options = {
         key: razorpayKey,
-        amount: Math.round(payload.total_amount * 100), // in paise
+        amount: Math.round(orderData.total_amount * 100), // Server-calculated amount in paise — never use local payload
         currency: "INR",
         name: "Kalindi Dry Fruits",
         description: "Premium Wellness Goods",
@@ -226,7 +516,7 @@ export default function CartDrawer() {
               updateUser({
                 ...user,
                 phone: form.phone,
-                address: form.address
+                address: shippingAddress
               });
             }
           } catch (verifyErr) {
@@ -242,7 +532,7 @@ export default function CartDrawer() {
           contact: form.phone,
         },
         notes: {
-          address: form.address,
+          address: shippingAddress,
         },
         theme: {
           color: "#3D1A5C",
@@ -259,7 +549,7 @@ export default function CartDrawer() {
 
     } catch (err: any) {
       console.error(err);
-      alert("Something went wrong while placing your order. Please try again.");
+      alert(err.message || "Something went wrong while placing your order. Please try again.");
       setIsSubmitting(false);
     }
   };
@@ -270,15 +560,50 @@ export default function CartDrawer() {
     if (step === "success") {
       setStep("cart");
       setForm({ name: "", email: "", phone: "", address: "" });
+      setStreetAddress("");
+      setPincode("");
+      setCity("");
+      setState("");
+      setIsPincodeValid(false);
+      setPincodeError("");
+      setAddressValidationError("");
     }
   };
 
+  // Calculate total weight of cart items in kg
+  const totalWeightKg = cartItems.reduce((total, item) => {
+    let itemWeight = 0;
+    if (item.weight === "250g") {
+      itemWeight = 0.25;
+    } else if (item.weight === "500g") {
+      itemWeight = 0.5;
+    } else if (["1000g", "1kg", "1 kg", "1000 g"].includes(item.weight)) {
+      itemWeight = 1.0;
+    }
+    return total + (itemWeight * item.quantity);
+  }, 0);
+
   // Shipping Calculations
-  const shippingThreshold = 499;
-  const shippingFee = 60;
-  const isFreeShipping = cartTotal >= shippingThreshold;
-  const progressToFreeShipping = Math.min((cartTotal / shippingThreshold) * 100, 100);
-  const grandTotal = cartTotal + (isFreeShipping ? 0 : shippingFee);
+  const shippingThreshold = 2000;
+  
+  // Calculate weight-based shipping fee
+  let baseShippingFee = 50;
+  if (totalWeightKg <= 1.0) {
+    baseShippingFee = 50;
+  } else if (totalWeightKg <= 2.0) {
+    baseShippingFee = 120;
+  } else if (totalWeightKg <= 3.0) {
+    baseShippingFee = 150;
+  } else {
+    baseShippingFee = 180;
+  }
+
+  const discountAmount = appliedCoupon === "FIRST7" ? Math.round(cartTotal * 0.07 * 100) / 100 : 0;
+  const discountedSubtotal = cartTotal - discountAmount;
+  const isFreeShipping = discountedSubtotal >= shippingThreshold;
+  const progressToFreeShipping = Math.min((discountedSubtotal / shippingThreshold) * 100, 100);
+  const shippingFee = isFreeShipping ? 0 : baseShippingFee;
+  const grandTotal = discountedSubtotal + shippingFee;
 
   return (
     <div data-lenis-prevent className="fixed inset-0 z-50 overflow-hidden">
@@ -345,29 +670,29 @@ export default function CartDrawer() {
                   </div>
                 ) : (
                   <>
-                    {/* Free Shipping Progress */}
-                    <div className="px-6 pt-4 pb-2 border-b border-purple-500/5 bg-purple-500/5">
-                      <div className="flex justify-between text-xs font-semibold mb-1">
-                        <span>
-                          {isFreeShipping ? (
-                            <span className="text-emerald-400 flex items-center gap-1">
-                              <Sparkles className="w-3.5 h-3.5" /> Free shipping unlocked!
-                            </span>
-                          ) : (
-                            <span className="text-white/70">
-                              Add <strong className="text-[#e91e8c]">₹{shippingThreshold - cartTotal}</strong> more for Free Shipping
-                            </span>
-                          )}
-                        </span>
-                        <span className="text-white/50">Threshold: ₹{shippingThreshold}</span>
-                      </div>
-                      <div className="h-1.5 w-full bg-white/10 rounded-full overflow-hidden">
-                        <div
-                          className="h-full bg-gradient-to-r from-[#e91e8c] to-purple-500 transition-all duration-300"
-                          style={{ width: `${progressToFreeShipping}%` }}
-                        />
-                      </div>
-                    </div>
+                     {/* Free Shipping Progress */}
+                     <div className="px-6 pt-4 pb-2 border-b border-purple-500/5 bg-purple-500/5">
+                       <div className="flex justify-between text-xs font-semibold mb-1">
+                         <span>
+                           {isFreeShipping ? (
+                             <span className="text-emerald-400 flex items-center gap-1">
+                               <Sparkles className="w-3.5 h-3.5" /> Free shipping unlocked!
+                             </span>
+                           ) : (
+                             <span className="text-white/70">
+                               Add <strong className="text-[#e91e8c]">₹{Math.max(0, shippingThreshold - discountedSubtotal)}</strong> more for Free Shipping
+                             </span>
+                           )}
+                         </span>
+                         <span className="text-white/50">Threshold: ₹{shippingThreshold}</span>
+                       </div>
+                       <div className="h-1.5 w-full bg-white/10 rounded-full overflow-hidden">
+                         <div
+                           className="h-full bg-gradient-to-r from-[#e91e8c] to-purple-500 transition-all duration-300"
+                           style={{ width: `${progressToFreeShipping}%` }}
+                         />
+                       </div>
+                     </div>
 
                     {/* Scrollable list */}
                     <div className="flex-1 overflow-y-auto px-6 py-4 space-y-4">
@@ -383,6 +708,10 @@ export default function CartDrawer() {
                                 src={item.image_url}
                                 alt={item.name}
                                 className="w-full h-full object-cover"
+                                onError={(e) => {
+                                  e.currentTarget.onerror = null; // Prevent infinite loops
+                                  e.currentTarget.src = getFallbackImage(item.name);
+                                }}
                               />
                             ) : (
                               <div className={`w-full h-full bg-gradient-to-br ${item.color || "from-purple-900 to-indigo-950"} flex items-center justify-center`}>
@@ -428,10 +757,77 @@ export default function CartDrawer() {
 
                     {/* Summary Footer */}
                     <div className="p-6 border-t border-purple-500/10 bg-white/[0.01] space-y-4">
+                      {/* Promo Code Input */}
+                      <div className="border-b border-purple-500/10 pb-4 space-y-2">
+                        <div className="flex justify-between items-center">
+                          <label className="text-xs font-semibold text-white/60">Promo Code</label>
+                          {appliedCoupon && (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setAppliedCoupon(null);
+                                setCouponCode("");
+                                setCouponSuccess(null);
+                                setCouponError(null);
+                                setIsManuallyRemoved(true);
+                              }}
+                              className="text-[10px] font-bold text-[#e91e8c] hover:underline"
+                            >
+                              Remove Code
+                            </button>
+                          )}
+                        </div>
+                        <div className="flex gap-2">
+                          <input
+                            type="text"
+                            placeholder="Enter promo code (e.g. FIRST7)"
+                            value={couponCode}
+                            onChange={(e) => {
+                              setCouponCode(e.target.value);
+                              setCouponError(null);
+                            }}
+                            disabled={appliedCoupon !== null || isValidatingCoupon}
+                            className={`flex-1 px-4 py-2.5 rounded-xl bg-white/5 border text-sm text-white placeholder:text-white/20 outline-none transition-all ${
+                              appliedCoupon 
+                                ? "border-emerald-500/30 text-emerald-400 font-semibold cursor-not-allowed bg-emerald-500/5"
+                                : "border-white/10 focus:border-purple-500"
+                            }`}
+                          />
+                          <button
+                            type="button"
+                            onClick={handleApplyCoupon}
+                            disabled={appliedCoupon !== null || isValidatingCoupon || !couponCode.trim()}
+                            className="px-4 py-2.5 rounded-xl bg-purple-600/30 border border-purple-500/30 text-xs font-bold text-white hover:bg-purple-600/50 hover:border-purple-500/50 disabled:opacity-40 disabled:cursor-not-allowed transition-all"
+                          >
+                            {isValidatingCoupon ? (
+                              <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                            ) : (
+                              "Apply"
+                            )}
+                          </button>
+                        </div>
+                        {couponError && (
+                          <p className="text-[11px] font-medium text-red-400 pl-1">{couponError}</p>
+                        )}
+                        {couponSuccess && (
+                          <p className="text-[11px] font-medium text-emerald-400 pl-1">{couponSuccess}</p>
+                        )}
+                      </div>
+
                       <div className="space-y-2 text-sm text-white/70">
                         <div className="flex justify-between">
                           <span>Subtotal</span>
                           <span className="text-white font-medium">₹{cartTotal}</span>
+                        </div>
+                        {appliedCoupon && (
+                          <div className="flex justify-between text-emerald-400">
+                            <span>Discount (7% off)</span>
+                            <span>-₹{discountAmount}</span>
+                          </div>
+                        )}
+                        <div className="flex justify-between items-center text-xs text-white/50 border-t border-white/5 pt-1.5">
+                          <span>Total Weight</span>
+                          <span>{totalWeightKg.toFixed(2)} kg</span>
                         </div>
                         <div className="flex justify-between">
                           <span>Shipping</span>
@@ -444,10 +840,29 @@ export default function CartDrawer() {
                       </div>
 
                       <button
-                        onClick={() => setStep("checkout")}
+                        onClick={() => {
+                          if (!user) {
+                            // Close cart, prompt login, then reopen cart at checkout step
+                            setIsCartOpen(false);
+                            openLoginModal(() => {
+                              setIsCartOpen(true);
+                              setStep("checkout");
+                            });
+                          } else {
+                            setStep("checkout");
+                          }
+                        }}
                         className="w-full py-4 rounded-xl bg-gradient-to-r from-[#e91e8c] to-[#be185d] font-bold flex items-center justify-center gap-2 hover:shadow-[0_0_20px_rgba(233,30,140,0.4)] transition-all group"
                       >
-                        Proceed to Checkout <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
+                        {user ? (
+                          <>
+                            Proceed to Checkout <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
+                          </>
+                        ) : (
+                          <>
+                            <Lock className="w-4 h-4" /> Sign In to Checkout
+                          </>
+                        )}
                       </button>
                     </div>
                   </>
@@ -536,27 +951,154 @@ export default function CartDrawer() {
                         {errors.phone && <p className="text-xs text-red-400">{errors.phone}</p>}
                       </div>
 
-                      {/* Address */}
-                      <div className="space-y-1">
-                        <label className="text-xs font-semibold text-white/70 block">Shipping Address</label>
-                        <textarea
-                          name="address"
-                          value={form.address}
-                          onChange={handleInputChange}
-                          rows={3}
-                          className={`w-full px-4 py-3 rounded-xl bg-white/5 border ${errors.address ? "border-red-500 focus:border-red-500" : "border-white/10 focus:border-[#e91e8c]"} text-white placeholder:text-white/20 outline-none resize-none transition-colors`}
-                          placeholder="Street Address, City, State, ZIP Code"
-                        />
-                        {errors.address && <p className="text-xs text-red-400">{errors.address}</p>}
+                      {/* Structured Shipping Address */}
+                      <div className="space-y-4">
+                        {/* Street Address */}
+                        <div className="space-y-1">
+                          <label className="text-xs font-semibold text-white/70 block">Street Address</label>
+                          <textarea
+                            value={streetAddress}
+                            onChange={(e) => {
+                              setStreetAddress(e.target.value);
+                              if (errors.streetAddress) {
+                                setErrors(prev => ({ ...prev, streetAddress: "" }));
+                              }
+                              if (addressValidationError) {
+                                setAddressValidationError("");
+                              }
+                            }}
+                            rows={2}
+                            className={`w-full px-4 py-3 rounded-xl bg-white/5 border ${errors.streetAddress ? "border-red-500 focus:border-red-500" : "border-white/10 focus:border-[#e91e8c]"} text-white placeholder:text-white/20 outline-none resize-none transition-colors`}
+                            placeholder="Flat/House No, Building Name, Area, Street"
+                          />
+                          {errors.streetAddress && <p className="text-xs text-red-400">{errors.streetAddress}</p>}
+                          {addressValidationError && <p className="text-xs text-red-400 mt-1.5 font-semibold leading-relaxed">{addressValidationError}</p>}
+                        </div>
+
+                        {/* PIN Code */}
+                        <div className="space-y-1">
+                          <label className="text-xs font-semibold text-white/70 block">PIN Code</label>
+                          <div className="relative">
+                            <input
+                              type="text"
+                              maxLength={6}
+                              value={pincode}
+                              onChange={handlePincodeInputChange}
+                              className={`w-full px-4 py-3 rounded-xl bg-white/5 border ${
+                                errors.pincode ? "border-red-500 focus:border-red-500" : isPincodeValid ? "border-emerald-500 focus:border-emerald-500" : "border-white/10 focus:border-[#e91e8c]"
+                              } text-white placeholder:text-white/20 outline-none transition-colors pr-10`}
+                              placeholder="e.g. 400101"
+                            />
+                            {isPincodeValidating && (
+                              <div className="absolute right-3.5 top-1/2 -translate-y-1/2">
+                                <div className="w-4 h-4 border-2 border-white/20 border-t-purple-400 rounded-full animate-spin" />
+                              </div>
+                            )}
+                            {!isPincodeValidating && isPincodeValid && (
+                              <CheckCircle className="w-5 h-5 text-emerald-400 absolute right-3.5 top-1/2 -translate-y-1/2 transition-all duration-200" />
+                            )}
+                          </div>
+                          {errors.pincode && <p className="text-xs text-red-400">{errors.pincode}</p>}
+                        </div>
+
+                        {/* City & State (Disabled/Read-only style but auto-filled) */}
+                        {isPincodeValid && (
+                          <div className="grid grid-cols-2 gap-3 transition-all duration-300 ease-out">
+                            <div className="space-y-1">
+                              <label className="text-[10px] font-bold text-white/50 block uppercase tracking-wider">City</label>
+                              <input
+                                type="text"
+                                value={city}
+                                onChange={(e) => setCity(e.target.value)}
+                                readOnly={isPincodeValid && !!city && !pincodeError}
+                                className={`w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white placeholder:text-white/20 outline-none ${
+                                  isPincodeValid && !!city && !pincodeError ? "opacity-75 cursor-not-allowed bg-white/[0.02] border-white/5" : "focus:border-[#e91e8c]"
+                                }`}
+                                placeholder="City"
+                              />
+                            </div>
+                            <div className="space-y-1">
+                              <label className="text-[10px] font-bold text-white/50 block uppercase tracking-wider">State</label>
+                              <input
+                                type="text"
+                                value={state}
+                                onChange={(e) => setState(e.target.value)}
+                                readOnly={isPincodeValid && !!state && !pincodeError}
+                                className={`w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white placeholder:text-white/20 outline-none ${
+                                  isPincodeValid && !!state && !pincodeError ? "opacity-75 cursor-not-allowed bg-white/[0.02] border-white/5" : "focus:border-[#e91e8c]"
+                                }`}
+                                placeholder="State"
+                              />
+                            </div>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Payment Method Selector */}
+                      <div className="space-y-2">
+                        <label className="text-xs font-semibold text-white/70 block">Payment Method</label>
+                        <div className="grid grid-cols-2 gap-3">
+                          <button
+                            type="button"
+                            onClick={() => setPaymentMethod("online")}
+                            className={`p-4 rounded-xl border text-left flex flex-col justify-between h-28 transition-all hover:bg-white/[0.04] ${
+                              paymentMethod === "online"
+                                ? "border-[#e91e8c] bg-[#e91e8c]/5 shadow-[0_0_15px_rgba(233,30,140,0.15)] text-white"
+                                : "border-white/10 bg-white/5 text-white/60 hover:border-white/20"
+                            }`}
+                          >
+                            <div className="flex items-center justify-between w-full">
+                              <span className="text-xs font-bold text-white">Pay Online</span>
+                              <CreditCard className={`w-4 h-4 ${paymentMethod === "online" ? "text-[#e91e8c]" : "text-white/40"}`} />
+                            </div>
+                            <span className="text-[10px] text-white/40 leading-snug">UPI, Card, NetBanking (via Razorpay)</span>
+                          </button>
+                          
+                          <button
+                            type="button"
+                            onClick={() => setPaymentMethod("cod")}
+                            className={`p-4 rounded-xl border text-left flex flex-col justify-between h-28 transition-all hover:bg-white/[0.04] ${
+                              paymentMethod === "cod"
+                                ? "border-[#e91e8c] bg-[#e91e8c]/5 shadow-[0_0_15px_rgba(233,30,140,0.15)] text-white"
+                                : "border-white/10 bg-white/5 text-white/60 hover:border-white/20"
+                            }`}
+                          >
+                            <div className="flex items-center justify-between w-full">
+                              <span className="text-xs font-bold text-white">Cash on Delivery</span>
+                              <Truck className={`w-4 h-4 ${paymentMethod === "cod" ? "text-[#e91e8c]" : "text-white/40"}`} />
+                            </div>
+                            <span className="text-[10px] text-white/40 leading-snug">Pay via Cash / UPI at your doorstep</span>
+                          </button>
+                        </div>
                       </div>
                     </div>
                   </div>
 
                   {/* Submit Footer */}
                   <div className="p-6 border-t border-purple-500/10 bg-white/[0.01] space-y-4">
-                    <div className="flex justify-between text-base font-bold text-white">
-                      <span>Grand Total</span>
-                      <span className="text-[#D4AF37]">₹{grandTotal}</span>
+                    <div className="space-y-2 text-sm text-white/70">
+                      <div className="flex justify-between">
+                        <span>Subtotal</span>
+                        <span className="text-white font-medium">₹{cartTotal}</span>
+                      </div>
+                      {appliedCoupon && (
+                        <div className="flex justify-between text-emerald-400">
+                          <span>Discount (7% off)</span>
+                          <span>-₹{discountAmount}</span>
+                        </div>
+                      )}
+                      <div className="flex justify-between items-center text-xs text-white/50 border-t border-white/5 pt-1.5">
+                        <span>Total Weight</span>
+                        <span>{totalWeightKg.toFixed(2)} kg</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span>Shipping</span>
+                        <span>{isFreeShipping ? <span className="text-emerald-400 font-medium">Free</span> : `₹${shippingFee}`}</span>
+                      </div>
+                      <div className="border-t border-white/5 pt-2 flex justify-between text-base font-bold text-white">
+                        <span>Grand Total</span>
+                        <span className="text-[#D4AF37]">₹{grandTotal}</span>
+                      </div>
                     </div>
 
                     <button
@@ -599,7 +1141,6 @@ export default function CartDrawer() {
 
                 <div className="space-y-2">
                   <h3 className="text-2xl font-black tracking-wide text-white">Order Placed!</h3>
-                  <p className="text-[#D4AF37] font-semibold text-sm">Order ID: #{orderId}</p>
                   <p className="text-white/60 text-sm max-w-xs mx-auto mt-2">
                     A beautifully styled order confirmation receipt has been sent to <strong className="text-white">{form.email}</strong>.
                   </p>

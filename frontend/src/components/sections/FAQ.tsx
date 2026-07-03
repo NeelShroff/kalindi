@@ -23,7 +23,7 @@ const faqs = [
   },
   {
     q: "Do you ship across India?",
-    a: "Yes, we deliver Pan India! Standard delivery takes 3-5 business days. We offer free shipping on all orders above ₹499.",
+    a: "Yes, we deliver Pan India! Standard delivery takes 3-5 business days. We offer free shipping on all orders above ₹2,000. For orders under ₹2,000, shipping is based on total weight: ₹50 for up to 1 kg, ₹120 for up to 2 kg, ₹150 for up to 3 kg, and ₹180 for 4 kg or more.",
   },
   {
     q: "Are your products FSSAI certified?",

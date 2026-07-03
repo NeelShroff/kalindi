@@ -31,6 +31,7 @@ import { useCart } from "@/context/CartContext";
 import { useAuth } from "@/context/AuthContext";
 import ChatProductCard from "@/components/ChatProductCard";
 import Link from "next/link";
+import { getProductImage, getFallbackImage } from "@/lib/utils";
 
 interface Message {
   role: "user" | "assistant";
@@ -251,7 +252,11 @@ Let's craft the perfect custom hamper, evaluate your wellness needs, or answer q
       return;
     }
     try {
-      const response = await fetch(`${apiUrl}/api/orders/last?email=${encodeURIComponent(user.email)}`);
+      const response = await fetch(`${apiUrl}/api/orders/last?email=${encodeURIComponent(user.email)}`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
       if (response.ok) {
         const order = await response.json();
         if (order && order.items) {
@@ -260,14 +265,14 @@ Let's craft the perfect custom hamper, evaluate your wellness needs, or answer q
 
           // Loop through each item in the order and add it to the cart
           for (const item of order.items) {
-            let imageUrl = "/almonds.webp";
+            let imageUrl = getFallbackImage(item.product_name);
             let color = "from-[#D2B48C] to-[#8B6914]";
             
             try {
               const prodRes = await fetch(`${apiUrl}/api/products/${item.product_id}`);
               if (prodRes.ok) {
                 const prod = await prodRes.json();
-                imageUrl = prod.image_url || imageUrl;
+                imageUrl = getProductImage(prod);
                 color = prod.color || color;
               }
             } catch (e) {
@@ -304,7 +309,7 @@ Let's craft the perfect custom hamper, evaluate your wellness needs, or answer q
       const prodRes = await fetch(`${apiUrl}/api/products/${productId}`);
       if (prodRes.ok) {
         const prod = await prodRes.json();
-        imageUrl = prod.image_url || imageUrl;
+        imageUrl = getProductImage(prod);
         color = prod.color || color;
         name = prod.name || name;
       }
@@ -1000,7 +1005,7 @@ Please diagnose my results and recommend a tailored luxury dry fruits selection 
             <img
               src="/kalindi.webp"
               alt="Kalindi Logo"
-              className="h-8 object-contain"
+              className="h-11 object-contain"
             />
           </div>
           

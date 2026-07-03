@@ -1,14 +1,23 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from fastapi.security import OAuth2PasswordRequestForm
+from slowapi import Limiter
+from slowapi.util import get_remote_address
 from ..config import settings
 from ..schemas import AdminLogin, Token
 from ..auth import verify_password, create_access_token, get_password_hash
 
 router = APIRouter(prefix="/api/auth", tags=["auth"])
 
+# Rate limiter for auth endpoints (keyed by client IP)
+_limiter = Limiter(key_func=get_remote_address)
+
 @router.post("/login", response_model=Token)
-def login(login_data: AdminLogin):
-    """Authenticate admin and return JWT access token (JSON payload)."""
+@_limiter.limit("5/minute")
+def login(request: Request, login_data: AdminLogin):
+    """Authenticate admin and return JWT access token (JSON payload).
+    
+    SECURITY: Rate-limited to 5 attempts per minute per IP.
+    """
     is_valid_user = login_data.username == settings.ADMIN_USERNAME
     # Check password (either plain text environment value or hashed)
     is_valid_pass = verify_password(login_data.password, settings.ADMIN_PASSWORD)
@@ -40,6 +49,7 @@ def oauth_login(form_data: OAuth2PasswordRequestForm = Depends()):
     return {"access_token": access_token, "token_type": "bearer"}
 
 import jwt
+import os
 from sqlalchemy.orm import Session
 from ..database import get_db
 from ..models import User
@@ -48,8 +58,12 @@ from ..services.email import send_html_email
 import random
 import time
 
-# Global in-memory OTP store: email -> { "code": str, "expires_at": float }
-otp_store = {}
+# Global in-memory OTP store: email -> { "code": str, "expires_at": float, "request_count": int, "window_start": float }
+otp_store: dict = {}
+
+# Rate limit constants
+OTP_MAX_REQUESTS_PER_WINDOW = 3
+OTP_WINDOW_SECONDS = 600  # 10 minutes
 
 def generate_otp_email_html(otp_code: str) -> str:
     return f"""
@@ -104,12 +118,47 @@ def google_login(payload: GoogleLoginRequest, db: Session = Depends(get_db)):
         google_id = "demo-google-id-" + email
     elif payload.credential:
         try:
-            # Decode the Google ID token
-            decoded = jwt.decode(payload.credential, options={"verify_signature": False})
-            email = decoded.get("email")
-            name = decoded.get("name")
-            picture = decoded.get("picture")
-            google_id = decoded.get("sub")
+            # Verify the Google ID token cryptographically using Google's public keys
+            try:
+                from google.oauth2 import id_token as google_id_token
+                from google.auth.transport import requests as google_requests
+                google_client_id = os.getenv("GOOGLE_CLIENT_ID") or os.getenv("NEXT_PUBLIC_GOOGLE_CLIENT_ID") or ""
+                if google_client_id:
+                    id_info = google_id_token.verify_oauth2_token(
+                        payload.credential,
+                        google_requests.Request(),
+                        google_client_id
+                    )
+                    email = id_info.get("email")
+                    name = id_info.get("name")
+                    picture = id_info.get("picture")
+                    google_id = id_info.get("sub")
+                else:
+                    # No Google client ID configured — fall back to unverified decode (dev only)
+                    if settings.APP_ENV == "production":
+                        raise HTTPException(
+                            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                            detail="GOOGLE_CLIENT_ID is not configured on the server."
+                        )
+                    decoded = jwt.decode(payload.credential, options={"verify_signature": False})
+                    email = decoded.get("email")
+                    name = decoded.get("name")
+                    picture = decoded.get("picture")
+                    google_id = decoded.get("sub")
+            except ImportError:
+                # google-auth not installed — fall back to unverified decode with a warning
+                if settings.APP_ENV == "production":
+                    raise HTTPException(
+                        status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                        detail="google-auth library is not installed. Cannot verify Google tokens securely."
+                    )
+                decoded = jwt.decode(payload.credential, options={"verify_signature": False})
+                email = decoded.get("email")
+                name = decoded.get("name")
+                picture = decoded.get("picture")
+                google_id = decoded.get("sub")
+        except HTTPException:
+            raise
         except Exception as e:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
@@ -160,30 +209,53 @@ def google_login(payload: GoogleLoginRequest, db: Session = Depends(get_db)):
 
 @router.post("/send-otp")
 def send_otp(payload: SendOtpRequest):
-    """Generate a 6-digit OTP code, save to memory store, and email to customer."""
-    email = payload.email.strip().lower()
+    """Generate a 6-digit OTP code, save to memory store, and email to customer.
     
+    SECURITY: Rate-limited to 3 OTP requests per email per 10 minutes.
+    """
+    email = payload.email.strip().lower()
+
+    # ── Rate limiting ─────────────────────────────────────────────────────────
+    now = time.time()
+    existing = otp_store.get(email, {})
+    window_start = existing.get("window_start", 0)
+    request_count = existing.get("request_count", 0)
+
+    # Reset the window if the time window has elapsed
+    if now - window_start > OTP_WINDOW_SECONDS:
+        window_start = now
+        request_count = 0
+
+    if request_count >= OTP_MAX_REQUESTS_PER_WINDOW:
+        wait_seconds = int(OTP_WINDOW_SECONDS - (now - window_start))
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail=f"Too many OTP requests. Please wait {wait_seconds} seconds before trying again."
+        )
+
     # Generate 6-digit code
     code = f"{random.randint(100000, 999999)}"
-    
-    # Save to memory (expires in 5 minutes)
+
+    # Save to memory (expires in 5 minutes), preserving rate-limit counters
     otp_store[email] = {
         "code": code,
-        "expires_at": time.time() + 300
+        "expires_at": now + 300,
+        "request_count": request_count + 1,
+        "window_start": window_start,
     }
-    
+
     # Render HTML content
     html_content = generate_otp_email_html(code)
     subject = f"{code} is your Kalindi verification code"
-    
+
     # Send email
     email_sent = send_html_email(subject, html_content, email)
-    
+
     # Crucial dev fallback: print code in logs so user can easily test on local
     print("=" * 60)
     print(f"[OTP] Sent code {code} to {email} (SMTP sent: {email_sent})")
     print("=" * 60)
-    
+
     return {"message": "OTP sent successfully", "dev_fallback": not email_sent}
 
 

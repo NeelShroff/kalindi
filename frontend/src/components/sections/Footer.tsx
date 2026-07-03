@@ -1,11 +1,20 @@
 "use client";
 
+import { useState } from "react";
 import { motion } from "framer-motion";
-import { Share2, Instagram, MessageCircle, AtSign, Mail, Phone, MapPin, ArrowRight } from "lucide-react";
+import { Share2, Instagram, MessageCircle, AtSign, Mail, Phone, MapPin, ArrowRight, Copy, Check } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 
 export default function Footer() {
+  const [copied, setCopied] = useState(false);
+
+  const handleCopyCode = () => {
+    navigator.clipboard.writeText("FIRST7");
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
   const handleShare = () => {
     if (typeof navigator !== "undefined" && navigator.share) {
       navigator.share({
@@ -21,7 +30,7 @@ export default function Footer() {
 
   return (
     <footer id="contact" className="relative z-10 bg-transparent border-t border-kalindi-purple/20">
-      {/* Newsletter CTA */}
+      {/* Newsletter/Coupon CTA */}
       <div className="relative py-20 px-6 bg-kalindi-purple/5 backdrop-blur-md border-b border-kalindi-purple/20 overflow-hidden">
         <div className="absolute inset-0 pointer-events-none">
           <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[300px] bg-[radial-gradient(circle_at_center,rgba(233,30,140,0.12)_0%,transparent_70%)]" />
@@ -36,22 +45,39 @@ export default function Footer() {
             <h2 className="text-4xl md:text-5xl font-bold mb-4 text-kalindi-purple">
               Get{" "}
               <span className="bg-gradient-to-r from-[#e91e8c] to-[#f472b6] bg-clip-text text-transparent">
-                10% Off
+                7% Off
               </span>{" "}
               Your First Order
             </h2>
             <p className="text-[#0f1a34]/70 mb-8 text-lg font-light">
-              Subscribe to receive exclusive offers, seasonal drops, and wellness tips straight to your inbox.
+              Use the coupon code below at checkout to enjoy a special discount on your first purchase.
             </p>
-            <div className="flex gap-3 max-w-md mx-auto">
-              <input
-                type="email"
-                placeholder="Enter your email"
-                className="flex-1 px-5 py-4 rounded-full bg-kalindi-purple/5 border border-kalindi-purple/20 text-[#0f1a34] placeholder:text-[#0f1a34]/40 focus:outline-none focus:border-[#e91e8c]/60 transition-colors"
-              />
-              <button className="px-6 py-4 rounded-full bg-gradient-to-r from-[#e91e8c] to-[#be185d] text-white font-semibold hover:shadow-[0_0_30px_rgba(233,30,140,0.5)] transition-all duration-300 flex items-center gap-2">
-                Subscribe <ArrowRight className="w-4 h-4" />
+
+            <div className="flex flex-col items-center gap-4">
+              <button
+                onClick={handleCopyCode}
+                className="relative inline-flex items-center gap-4 px-6 py-3.5 rounded-2xl bg-white/40 border border-[#e91e8c]/25 hover:border-[#e91e8c]/50 shadow-xs backdrop-blur-xs cursor-pointer select-all group transition-all duration-300 active:scale-98"
+              >
+                <div className="text-left">
+                  <div className="text-[10px] font-bold text-kalindi-purple/50 uppercase tracking-widest">Coupon Code</div>
+                  <div className="text-xl font-black text-[#e91e8c] tracking-wider font-mono">FIRST7</div>
+                </div>
+                <div className="h-8 w-px bg-kalindi-purple/10" />
+                <span className="flex items-center gap-1.5 text-xs font-bold text-[#0f1a34]/70 group-hover:text-[#e91e8c] transition-colors">
+                  {copied ? (
+                    <>
+                      <Check className="w-4.5 h-4.5 text-emerald-500" /> Copied!
+                    </>
+                  ) : (
+                    <>
+                      <Copy className="w-4.5 h-4.5" /> Click to Copy
+                    </>
+                  )}
+                </span>
               </button>
+              <p className="text-xs font-medium text-kalindi-purple/60 mt-1 block">
+                *Valid on first orders above ₹1,500 only.
+              </p>
             </div>
           </motion.div>
         </div>

@@ -94,11 +94,38 @@ else
     echo "Swap space already configured."
 fi
 
+# Stop existing containers if running to release bind mounts
+if [ -d /home/ubuntu/app ]; then
+    echo "Stopping existing containers to release static uploads..."
+    cd /home/ubuntu/app
+    docker compose down --remove-orphans || true
+    cd /home/ubuntu
+fi
+
+# Backup uploads if they exist to prevent deployment from deleting customer uploads
+if [ -d /home/ubuntu/app/backend/static/uploads ]; then
+    echo "Backing up uploaded images..."
+    rm -rf /home/ubuntu/uploads_backup
+    cp -r /home/ubuntu/app/backend/static/uploads /home/ubuntu/uploads_backup
+fi
+
 # Recreate application folder
 echo "Extracting new application zip..."
 rm -rf /home/ubuntu/app
 mkdir -p /home/ubuntu/app
 unzip -q /home/ubuntu/deploy.zip -d /home/ubuntu/app || true
+
+# Restore uploads
+if [ -d /home/ubuntu/uploads_backup ]; then
+    echo "Restoring uploaded images..."
+    rm -rf /home/ubuntu/app/backend/static/uploads
+    cp -r /home/ubuntu/uploads_backup /home/ubuntu/app/backend/static/uploads
+    rm -rf /home/ubuntu/uploads_backup
+fi
+
+# Ensure correct permissions on static and uploads directories
+echo "Setting permissions on static files directory..."
+chmod -R 755 /home/ubuntu/app/backend/static || true
 
 # Place backend env file in both backend and root directory for Docker Compose build args
 if [ -f /home/ubuntu/.env.backend ]; then
@@ -117,7 +144,6 @@ chown -R ubuntu:ubuntu /home/ubuntu/app
 cd /home/ubuntu/app
 echo "Running docker compose build and up..."
 export API_URL="$API_URL"
-docker compose down --remove-orphans
 docker compose up -d --build
 
 # Cleanup setup artifacts

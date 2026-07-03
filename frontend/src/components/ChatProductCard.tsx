@@ -5,11 +5,13 @@ import { motion } from "framer-motion";
 import { ShoppingCart, Star, Plus, Minus, Loader2 } from "lucide-react";
 import Image from "next/image";
 import { useCart } from "@/context/CartContext";
+import { getProductImage, getFallbackImage } from "@/lib/utils";
 
 interface Product {
   id: number;
   name: string;
   description?: string;
+  price_100g?: number | null;
   price_250g: number | null;
   price_500g: number | null;
   price_1000g: number | null;
@@ -148,7 +150,8 @@ export default function ChatProductCard({ productId }: ChatProductCardProps) {
           if (data) {
             setProduct(data);
             // set default weight based on options
-            if (data.price_500g !== null) setSelectedWeight("500g");
+            if (data.price_100g !== null && data.price_100g !== undefined) setSelectedWeight("100g");
+            else if (data.price_500g !== null) setSelectedWeight("500g");
             else if (data.price_250g !== null) setSelectedWeight("250g");
             else if (data.price_1000g !== null) setSelectedWeight("1kg");
             setIsLoading(false);
@@ -163,7 +166,8 @@ export default function ChatProductCard({ productId }: ChatProductCardProps) {
       const fb = fallbackProducts[productId];
       if (fb) {
         setProduct(fb);
-        if (fb.price_500g !== null) setSelectedWeight("500g");
+        if (fb.price_100g !== null && fb.price_100g !== undefined) setSelectedWeight("100g");
+        else if (fb.price_500g !== null) setSelectedWeight("500g");
         else if (fb.price_250g !== null) setSelectedWeight("250g");
         else if (fb.price_1000g !== null) setSelectedWeight("1kg");
       }
@@ -186,33 +190,17 @@ export default function ChatProductCard({ productId }: ChatProductCardProps) {
 
   const getWeightOptions = (p: Product) => {
     const options = [];
+    if (p.price_100g !== null && p.price_100g !== undefined) options.push("100g");
     if (p.price_250g !== null) options.push("250g");
     if (p.price_500g !== null) options.push("500g");
     if (p.price_1000g !== null) options.push("1kg");
     return options;
   };
 
-  const getFallbackImage = (productName: string) => {
-    const lower = productName.toLowerCase();
-    if (lower.includes("almond")) return "/almonds.webp";
-    if (lower.includes("pistachio")) return "/pistachios.webp";
-    if (lower.includes("cashew")) return "/cashews.webp";
-    if (lower.includes("date")) return "/dates.webp";
-    if (lower.includes("fig")) return "/figs.webp";
-    if (lower.includes("raisin")) return "/raisins.webp";
-    if (lower.includes("makhana") || lower.includes("fox")) return "/makhana.webp";
-    return "/giftbox.webp";
-  };
 
-  const getProductImage = (p: Product) => {
-    if (p.image_url) {
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8088";
-      return p.image_url.startsWith("/static") ? `${apiUrl}${p.image_url}` : p.image_url;
-    }
-    return getFallbackImage(p.name);
-  };
 
   const getSelectedPrice = (p: Product, weight: string) => {
+    if (weight === "100g") return p.price_100g || 0;
     if (weight === "250g") return p.price_250g || 0;
     if (weight === "500g") return p.price_500g || 0;
     if (weight === "1kg") return p.price_1000g || 0;
@@ -221,7 +209,7 @@ export default function ChatProductCard({ productId }: ChatProductCardProps) {
 
   const weightOptions = getWeightOptions(product);
   const price = getSelectedPrice(product, selectedWeight);
-  const originalPrice = Math.round(price * 1.3);
+  const originalPrice = Math.round(price / 0.7);
 
   // Cart syncing
   const cartItemId = `${product.id}-${selectedWeight}`;
@@ -262,12 +250,10 @@ export default function ChatProductCard({ productId }: ChatProductCardProps) {
     >
       {/* Product Image Thumbnail */}
       <div className="w-[80px] h-[80px] min-w-[80px] min-h-[80px] relative overflow-hidden rounded-xl bg-amber-50/50 border border-amber-500/10 flex-shrink-0">
-        <Image
+        <img
           src={getProductImage(product)}
           alt={product.name}
-          fill
-          sizes="80px"
-          className="object-cover group-hover:scale-105 transition-transform duration-500"
+          className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
         />
         {product.tag && (
           <span className="absolute top-1 left-1 px-1.5 py-0.5 rounded-full bg-amber-600 text-white text-[8px] font-bold z-10">

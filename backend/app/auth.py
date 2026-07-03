@@ -14,17 +14,23 @@ pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="api/auth/login", auto_error=False)
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
-    """Verifies that the plain password matches the hashed password."""
-    # Since we are using an environment variable for the admin password,
-    # we can either check it directly if it's plain text in .env or hash it.
-    # To keep it robust, we'll check both hashed comparison and direct plain string comparison
-    # in case the user specified a plain password in .env (like admin123).
-    if plain_password == hashed_password:
-        return True
-    try:
-        return pwd_context.verify(plain_password, hashed_password)
-    except Exception:
-        return False
+    """Verifies a password against a stored value.
+
+    - If the stored value is a bcrypt hash ($2b$ / $2a$), use bcrypt verification.
+    - If the stored value is a plain-text password (e.g. from .env), use
+      hmac.compare_digest for constant-time comparison to prevent timing attacks.
+    """
+    import hmac
+    if hashed_password.startswith("$2b$") or hashed_password.startswith("$2a$"):
+        # Bcrypt path — for user accounts stored in the database
+        try:
+            return pwd_context.verify(plain_password, hashed_password)
+        except Exception:
+            return False
+    else:
+        # Constant-time comparison — for plain-text admin password in .env
+        return hmac.compare_digest(plain_password, hashed_password)
+
 
 def get_password_hash(password: str) -> str:
     """Hashes a password using bcrypt."""

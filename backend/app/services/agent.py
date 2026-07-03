@@ -67,6 +67,8 @@ def get_product_catalog_string(db: Session) -> str:
     catalog_lines = []
     for p in products:
         prices = []
+        if p.price_100g is not None:
+            prices.append(f"100g: ₹{p.price_100g}")
         if p.price_250g is not None:
             prices.append(f"250g: ₹{p.price_250g}")
         if p.price_500g is not None:
@@ -92,7 +94,9 @@ def run_local_fallback_agent(query: str, db: Session, user_id: int = None) -> st
         price = 0
         
         # Check weight in query
-        if "500g" in query_lower or "500 g" in query_lower:
+        if "100g" in query_lower or "100 g" in query_lower:
+            weight = "100g"
+        elif "500g" in query_lower or "500 g" in query_lower:
             weight = "500g"
         elif "1kg" in query_lower or "1 kg" in query_lower or "1000g" in query_lower or "1000 g" in query_lower or "1-kg" in query_lower:
             weight = "1kg"
@@ -100,45 +104,57 @@ def run_local_fallback_agent(query: str, db: Session, user_id: int = None) -> st
         if "almond" in query_lower or "badam" in query_lower:
             productId = 1
             name = "Premium California Almonds"
-            prices = {"250g": 279, "500g": 499, "1kg": 949}
-            price = prices.get(weight, 279)
         elif "pistachio" in query_lower or "pista" in query_lower:
             productId = 2
             name = "Saffron Pistachios"
-            prices = {"250g": 399, "500g": 699, "1kg": 1299}
-            price = prices.get(weight, 399)
         elif "cashew" in query_lower or "kaju" in query_lower:
             productId = 3
             name = "Royal Cashews W320"
-            prices = {"250g": 299, "500g": 549, "1kg": 999}
-            price = prices.get(weight, 299)
         elif "date" in query_lower or "khajur" in query_lower:
             productId = 4
             name = "Medjool Dates"
-            prices = {"250g": 289, "500g": 449, "1kg": 849}
-            price = prices.get(weight, 289)
         elif "fig" in query_lower or "anjeer" in query_lower:
             productId = 5
             name = "Turkish Figs"
-            prices = {"250g": 379, "500g": 699, "1kg": 1299}
-            price = prices.get(weight, 379)
         elif "raisin" in query_lower or "kismis" in query_lower:
             productId = 6
             name = "Jumbo Raisins"
-            prices = {"250g": 169, "500g": 299, "1kg": 549}
-            price = prices.get(weight, 169)
         elif "fox" in query_lower or "makhana" in query_lower:
             productId = 7
             name = "Fox Nuts (Makhana)"
             if weight == "1kg":
                 weight = "500g"
-            prices = {"250g": 249, "500g": 449}
-            price = prices.get(weight, 249)
         elif "gift" in query_lower or "box" in query_lower or "hamper" in query_lower:
             productId = 8
             name = "Kalindi Assorted Gift Box"
             weight = "1kg"
-            price = 1299
+
+        if productId:
+            p = db.query(Product).filter(Product.id == productId).first()
+            if p:
+                if weight == "100g":
+                    price = p.price_100g or p.price_250g or p.price_500g or p.price_1000g or 0
+                    if p.price_100g is None:
+                        weight = "250g" # Fallback if 100g not configured
+                elif weight == "500g":
+                    price = p.price_500g or p.price_250g or p.price_1000g or 0
+                elif weight == "1kg":
+                    price = p.price_1000g or p.price_500g or p.price_250g or 0
+                else: # 250g default
+                    price = p.price_250g or p.price_500g or p.price_1000g or 0
+            else:
+                prices = {
+                    1: {"100g": 120, "250g": 279, "500g": 499, "1kg": 949},
+                    2: {"100g": 180, "250g": 399, "500g": 699, "1kg": 1299},
+                    3: {"100g": 130, "250g": 299, "500g": 549, "1kg": 999},
+                    4: {"250g": 289, "500g": 449, "1kg": 849},
+                    5: {"250g": 379, "500g": 699, "1kg": 1299},
+                    6: {"250g": 169, "500g": 299, "1kg": 549},
+                    7: {"250g": 249, "500g": 449},
+                    8: {"1kg": 1299}
+                }
+                prod_prices = prices.get(productId, {})
+                price = prod_prices.get(weight, prod_prices.get("250g", 0))
 
         if productId:
             return f"""### Adding {name} to Your Cart

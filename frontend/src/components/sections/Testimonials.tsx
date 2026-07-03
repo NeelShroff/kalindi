@@ -73,7 +73,7 @@ export default function Testimonials() {
             Customer Love
           </span>
           <h2 className="text-5xl md:text-6xl font-bold mb-6 text-sky-950">
-            50,000+ Happy{" "}
+            100+ Happy{" "}
             <span className="bg-gradient-to-r from-sky-600 to-blue-700 bg-clip-text text-transparent">
               Customers
             </span>

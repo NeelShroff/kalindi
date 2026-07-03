@@ -30,15 +30,15 @@ export default function Navbar() {
       transition={{ duration: 0.8, ease: "easeOut" }}
       className="fixed top-0 left-0 right-0 z-50 px-6 py-4"
     >
-      <div className="max-w-7xl mx-auto flex items-center justify-between bg-kalindi-purple/5 backdrop-blur-xl border border-kalindi-purple/20 rounded-2xl px-6 py-3 shadow-[0_8px_32px_rgba(61,26,92,0.05)]">
+      <div className="max-w-7xl mx-auto flex items-center justify-between bg-kalindi-purple/5 backdrop-blur-xl border border-kalindi-purple/20 rounded-2xl px-6 py-2 shadow-[0_8px_32px_rgba(61,26,92,0.05)]">
         {/* Logo */}
         <Link href="/" className="flex items-center">
           <Image
             src="/kalindi.webp"
             alt="Kalindi"
-            width={150}
-            height={40}
-            className="h-9 w-auto object-contain"
+            width={185}
+            height={55}
+            className="h-12 w-auto object-contain"
             priority
           />
         </Link>

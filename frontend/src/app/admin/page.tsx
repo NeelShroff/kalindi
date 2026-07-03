@@ -13,6 +13,7 @@ interface Product {
   id: number;
   name: string;
   description: string | null;
+  price_100g?: number | null;
   price_250g: number | null;
   price_500g: number | null;
   price_1000g: number | null;
@@ -41,6 +42,7 @@ interface Order {
   status: string;
   created_at: string;
   items: OrderItem[];
+  payment_method?: string;
 }
 
 export default function AdminPage() {
@@ -70,6 +72,7 @@ export default function AdminPage() {
   const [productForm, setProductForm] = useState({
     name: "",
     description: "",
+    price_100g: "",
     price_250g: "",
     price_500g: "",
     price_1000g: "",
@@ -207,6 +210,7 @@ export default function AdminPage() {
     const payload = {
       name: productForm.name,
       description: productForm.description || null,
+      price_100g: productForm.price_100g ? parseFloat(productForm.price_100g) : null,
       price_250g: productForm.price_250g ? parseFloat(productForm.price_250g) : null,
       price_500g: productForm.price_500g ? parseFloat(productForm.price_500g) : null,
       price_1000g: productForm.price_1000g ? parseFloat(productForm.price_1000g) : null,
@@ -250,6 +254,7 @@ export default function AdminPage() {
     setProductForm({
       name: "",
       description: "",
+      price_100g: "",
       price_250g: "",
       price_500g: "",
       price_1000g: "",
@@ -269,6 +274,7 @@ export default function AdminPage() {
     setProductForm({
       name: product.name,
       description: product.description || "",
+      price_100g: product.price_100g ? product.price_100g.toString() : "",
       price_250g: product.price_250g ? product.price_250g.toString() : "",
       price_500g: product.price_500g ? product.price_500g.toString() : "",
       price_1000g: product.price_1000g ? product.price_1000g.toString() : "",
@@ -623,6 +629,7 @@ export default function AdminPage() {
                           
                           {/* Prices per weight info */}
                           <div className="flex gap-4 text-xs font-semibold text-gray-900/50 mt-2">
+                            {product.price_100g !== null && <span>100g: <strong className="text-gray-900">₹{product.price_100g}</strong></span>}
                             {product.price_250g !== null && <span>250g: <strong className="text-gray-900">₹{product.price_250g}</strong></span>}
                             {product.price_500g !== null && <span>500g: <strong className="text-gray-900">₹{product.price_500g}</strong></span>}
                             {product.price_1000g !== null && <span>1kg: <strong className="text-gray-900">₹{product.price_1000g}</strong></span>}
@@ -702,6 +709,16 @@ export default function AdminPage() {
                             <p><span className="text-gray-900/45">Name:</span> {order.customer_name}</p>
                             <p><span className="text-gray-900/45">Email:</span> {order.customer_email}</p>
                             <p><span className="text-gray-900/45">Phone:</span> {order.customer_phone}</p>
+                            <p>
+                              <span className="text-gray-900/45">Payment:</span>{" "}
+                              <span className={`inline-block text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full ${
+                                order.payment_method === "cod"
+                                  ? "bg-purple-100 text-purple-700 border border-purple-200"
+                                  : "bg-emerald-100 text-emerald-700 border border-emerald-200"
+                              }`}>
+                                {order.payment_method === "cod" ? "Cash on Delivery (COD)" : "Online (Prepaid)"}
+                              </span>
+                            </p>
                             <p className="leading-relaxed">
                               <span className="text-gray-900/45">Shipping Address:</span><br />
                               <span className="text-xs text-gray-900/70 block mt-1 bg-gray-50 p-2.5 rounded-lg border border-gray-200 whitespace-pre-wrap">{order.shipping_address}</span>
@@ -805,7 +822,18 @@ export default function AdminPage() {
                         <label className="text-xs font-bold text-[#e91e8c] uppercase tracking-wider block">Prices per Weight (₹)</label>
                         <p className="text-[10px] text-gray-900/40">Enter numerical values. Leave blank if weight size is not offered.</p>
                         
-                        <div className="grid grid-cols-3 gap-3">
+                        <div className="grid grid-cols-4 gap-3">
+                          <div className="space-y-1">
+                            <label className="text-[10px] font-semibold text-gray-900/50 block">100g Price</label>
+                            <input
+                              type="number"
+                              value={productForm.price_100g}
+                              onChange={(e) => setProductForm(prev => ({ ...prev, price_100g: e.target.value }))}
+                              className="w-full px-3 py-2 rounded-xl bg-white border border-gray-300 text-gray-900 outline-none focus:border-[#e91e8c] text-xs"
+                              placeholder="₹100"
+                            />
+                          </div>
+
                           <div className="space-y-1">
                             <label className="text-[10px] font-semibold text-gray-900/50 block">250g Price</label>
                             <input

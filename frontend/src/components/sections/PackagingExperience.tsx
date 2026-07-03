@@ -43,7 +43,7 @@ export default function PackagingExperience() {
 
   return (
     <section id="packaging" className="relative py-32 px-6 z-10">
-      <div className="absolute right-0 top-1/2 -translate-y-1/2 w-[400px] h-[500px] bg-[radial-gradient(circle_at_center,rgba(99,102,241,0.04)_0%,transparent_70%)] pointer-events-none" />
+      <div className="absolute right-0 top-1/2 -translate-y-1/2 w-[400px] h-[500px] bg-[radial-gradient(circle_at_center,rgba(168,85,247,0.08)_0%,transparent_70%)] pointer-events-none" />
       <div className="max-w-7xl mx-auto">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-20 items-center">
           {/* Packaging Visual */}
@@ -67,14 +67,14 @@ export default function PackagingExperience() {
               <div className="relative w-full h-full flex items-center justify-center p-8">
                 
                 {/* LAYER 1: BASE CONTAINER (Velvet Base silhouette - stays centered) */}
-                <div className={`absolute w-[240px] h-[240px] bg-gradient-to-br from-[#12081f] to-[#07030b] rounded-[24px] border-2 border-purple-950/60 shadow-inner flex items-center justify-center transition-all duration-700 ${active ? "scale-95" : ""}`}>
-                  <div className="absolute inset-3 border border-purple-900/15 rounded-[18px] flex items-center justify-center opacity-40">
+                <div className={`absolute w-[240px] h-[240px] bg-gradient-to-br from-[#2d144d] to-[#180a2b] rounded-[24px] border-2 border-purple-800/40 shadow-inner flex items-center justify-center transition-all duration-700 ${active ? "scale-95" : ""}`}>
+                  <div className="absolute inset-3 border border-purple-500/10 rounded-[18px] flex items-center justify-center opacity-40">
                     <span className="text-[9px] tracking-[0.3em] text-[#fae8ff]/20 font-black">VACUUM CHAMBER</span>
                   </div>
                 </div>
 
                 {/* LAYER 2: THE TRAY WITH GOLD JARS (Reveals and slides top-right) */}
-                <div className={`absolute w-[230px] h-[230px] bg-[#0f0717]/95 rounded-[22px] border border-[#D4AF37]/25 shadow-lg flex flex-col justify-around p-4 transition-all duration-700 ease-[cubic-bezier(0.16,1,0.3,1)] z-10 ${active ? "translate-x-20 -translate-y-20 scale-105 rotate-[4deg] shadow-[0_20px_50px_rgba(0,0,0,0.6)]" : ""}`}>
+                <div className={`absolute w-[230px] h-[230px] bg-[#241038]/95 rounded-[22px] border border-[#D4AF37]/25 shadow-lg flex flex-col justify-around p-4 transition-all duration-700 ease-[cubic-bezier(0.16,1,0.3,1)] z-10 ${active ? "translate-x-20 -translate-y-20 scale-105 rotate-[4deg] shadow-[0_20px_50px_rgba(0,0,0,0.6)]" : ""}`}>
                   <span className="text-[8px] text-[#D4AF37] font-black uppercase tracking-[0.25em] text-center">Keepsake Drawer</span>
                   
                   {/* 3 Premium Glass Jars */}
@@ -137,7 +137,7 @@ export default function PackagingExperience() {
                 </div>
 
                 {/* LAYER 4: RIBBONED KEEPSAKE LID (Slides top-left and fades opacity slightly) */}
-                <div className={`absolute w-[240px] h-[240px] bg-gradient-to-br from-[#1d0e2e] via-[#0d0714] to-[#050208] rounded-[24px] border-2 border-[#D4AF37]/30 shadow-2xl transition-all duration-700 ease-[cubic-bezier(0.16,1,0.3,1)] z-20 flex flex-col items-center justify-center ${active ? "-translate-x-12 -translate-y-28 scale-95 -rotate-[8deg] shadow-[0_30px_60px_rgba(0,0,0,0.65)]" : ""}`}>
+                <div className={`absolute w-[240px] h-[240px] bg-gradient-to-br from-[#4a2473] via-[#2d124c] to-[#1a0a2e] rounded-[24px] border-2 border-[#D4AF37]/45 shadow-2xl transition-all duration-700 ease-[cubic-bezier(0.16,1,0.3,1)] z-20 flex flex-col items-center justify-center ${active ? "-translate-x-12 -translate-y-28 scale-95 -rotate-[8deg] shadow-[0_30px_60px_rgba(0,0,0,0.65)]" : ""}`}>
                   {/* Lid Lining Inset */}
                   <div className="absolute inset-2.5 border border-[#D4AF37]/15 rounded-[18px] pointer-events-none" />
 
@@ -177,18 +177,18 @@ export default function PackagingExperience() {
             whileInView={{ opacity: 1, x: 0 }}
             viewport={{ once: true }}
             transition={{ duration: 0.8 }}
-            className="p-8 md:p-10 rounded-3xl border border-indigo-300/20 bg-[#f0f4ff]/25 backdrop-blur-sm text-left"
+            className="p-8 md:p-10 rounded-3xl border border-purple-300/30 bg-[#fae8ff]/55 backdrop-blur-sm text-left"
           >
-            <span className="text-indigo-600 text-sm font-semibold tracking-widest uppercase mb-4 block">
+            <span className="text-purple-600 text-sm font-semibold tracking-widest uppercase mb-4 block">
               The Unboxing Experience
             </span>
-            <h2 className="text-4xl md:text-5xl font-bold mb-6 leading-tight text-indigo-950">
+            <h2 className="text-4xl md:text-5xl font-bold mb-6 leading-tight text-purple-950">
               Packaging as{" "}
-              <span className="bg-gradient-to-r from-indigo-600 to-violet-700 bg-clip-text text-transparent">
+              <span className="bg-gradient-to-r from-purple-600 to-violet-700 bg-clip-text text-transparent">
                 Luxury
               </span>
             </h2>
-            <p className="text-lg text-indigo-900/70 leading-relaxed mb-8 font-light">
+            <p className="text-lg text-purple-900/70 leading-relaxed mb-8 font-light">
               We believe the experience of receiving Kalindi should feel as special as the products themselves. From the moment you hold the box, you feel the difference.
             </p>
 
@@ -202,10 +202,10 @@ export default function PackagingExperience() {
                   transition={{ duration: 0.4, delay: i * 0.1 }}
                   className="flex gap-4 text-left"
                 >
-                  <div className="w-2 h-2 rounded-full bg-indigo-500 mt-2.5 flex-shrink-0" />
+                  <div className="w-2 h-2 rounded-full bg-purple-500 mt-2.5 flex-shrink-0" />
                   <div>
-                    <h4 className="text-indigo-950 font-semibold mb-1">{f.title}</h4>
-                    <p className="text-indigo-900/70 text-sm leading-relaxed">{f.desc}</p>
+                    <h4 className="text-purple-950 font-semibold mb-1">{f.title}</h4>
+                    <p className="text-purple-900/70 text-sm leading-relaxed">{f.desc}</p>
                   </div>
                 </motion.div>
               ))}

@@ -2,54 +2,114 @@ import os
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
+from slowapi import Limiter, _rate_limit_exceeded_handler
+from slowapi.util import get_remote_address
+from slowapi.errors import RateLimitExceeded
 from .database import engine, Base, SessionLocal
 from .models import Product
 from .routes import auth, products, orders, uploads, agent, history
 from .config import settings
 
+# Global rate limiter (keyed by client IP)
+limiter = Limiter(key_func=get_remote_address)
+
 # Create database tables
 Base.metadata.create_all(bind=engine)
 
-# Self-healing migration to add missing columns to users table if they don't exist
+# Self-healing migration to add missing columns to users and orders tables if they don't exist
 from sqlalchemy import text
 db = SessionLocal()
 try:
     if engine.name == "postgresql":
+        # users table columns
         db.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS hashed_password VARCHAR"))
         db.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS phone VARCHAR"))
         db.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS address VARCHAR"))
+        # orders table columns
+        db.execute(text("ALTER TABLE orders ADD COLUMN IF NOT EXISTS discount_code VARCHAR"))
+        db.execute(text("ALTER TABLE orders ADD COLUMN IF NOT EXISTS payment_method VARCHAR DEFAULT 'online'"))
+        db.execute(text("ALTER TABLE orders ADD COLUMN IF NOT EXISTS razorpay_order_id VARCHAR"))
+        db.execute(text("ALTER TABLE orders ADD COLUMN IF NOT EXISTS razorpay_payment_id VARCHAR"))
+        db.execute(text("ALTER TABLE orders ADD COLUMN IF NOT EXISTS razorpay_signature VARCHAR"))
+        # products table columns
+        db.execute(text("ALTER TABLE products ADD COLUMN IF NOT EXISTS price_100g FLOAT"))
         db.commit()
     else:
-        # SQLite migrations for each missing column
-        try:
-            db.execute(text("ALTER TABLE users ADD COLUMN hashed_password TEXT"))
-            db.commit()
-        except Exception:
-            pass
-        try:
-            db.execute(text("ALTER TABLE users ADD COLUMN phone TEXT"))
-            db.commit()
-        except Exception:
-            pass
-        try:
-            db.execute(text("ALTER TABLE users ADD COLUMN address TEXT"))
-            db.commit()
-        except Exception:
-            pass
+        # SQLite migrations for each missing column in users
+        for col in ["hashed_password", "phone", "address"]:
+            try:
+                db.execute(text(f"ALTER TABLE users ADD COLUMN {col} TEXT"))
+                db.commit()
+            except Exception:
+                pass
+        # SQLite migrations for each missing column in orders
+        for col in ["discount_code", "payment_method", "razorpay_order_id", "razorpay_payment_id", "razorpay_signature"]:
+            try:
+                db.execute(text(f"ALTER TABLE orders ADD COLUMN {col} TEXT"))
+                db.commit()
+            except Exception:
+                pass
+        # SQLite migrations for each missing column in products
+        for col in ["price_100g"]:
+            try:
+                db.execute(text(f"ALTER TABLE products ADD COLUMN {col} REAL"))
+                db.commit()
+            except Exception:
+                pass
 except Exception as e:
     print(f"Error checking/adding column: {e}")
 finally:
     db.close()
 
-app = FastAPI(title="Kalindi Luxury API", version="1.0.0")
 
-# Setup CORS middleware
+# In production, disable public API docs
+_docs_url = None if settings.APP_ENV == "production" else "/docs"
+_redoc_url = None if settings.APP_ENV == "production" else "/redoc"
+
+app = FastAPI(
+    title="Kalindi Luxury API",
+    version="1.0.0",
+    docs_url=_docs_url,
+    redoc_url=_redoc_url,
+)
+
+# Register rate-limit error handler
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+
+# CORS: open in dev, locked to FRONTEND_URL in production (including www/non-www and domain variations)
+_allowed_origins = []
+if settings.APP_ENV == "production":
+    if settings.FRONTEND_URL:
+        _allowed_origins.append(settings.FRONTEND_URL)
+        if "://www." in settings.FRONTEND_URL:
+            _allowed_origins.append(settings.FRONTEND_URL.replace("://www.", "://"))
+        else:
+            _allowed_origins.append(settings.FRONTEND_URL.replace("://", "://www."))
+            
+    # Add common production domains for Kalindi (plural and singular, with/without www)
+    extra_origins = [
+        "https://kalindidryfruits.com",
+        "https://www.kalindidryfruits.com",
+        "https://kalindidryfruit.com",
+        "https://www.kalindidryfruit.com",
+        "http://kalindidryfruits.com",
+        "http://www.kalindidryfruits.com",
+        "http://kalindidryfruit.com",
+        "http://www.kalindidryfruit.com"
+    ]
+    for origin in extra_origins:
+        if origin not in _allowed_origins:
+            _allowed_origins.append(origin)
+else:
+    _allowed_origins = ["*"]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Allows all origins for local dev convenience
+    allow_origins=_allowed_origins,
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    allow_headers=["Authorization", "Content-Type"],
 )
 
 # Setup directories

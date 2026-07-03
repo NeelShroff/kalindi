@@ -9,6 +9,7 @@ import {
   OrbitControls,
   useGLTF,
 } from "@react-three/drei";
+import { checkWebGLSupport } from "../lib/utils";
 import * as THREE from "three";
 import { motion } from "framer-motion";
 import gsap from "gsap";
@@ -44,6 +45,7 @@ function Lotus({
 }) {
   const { scene } = useGLTF("/lotus_slow.glb");
   const groupRef = useRef<THREE.Group>(null!);
+  const clonedScene = useMemo(() => scene.clone(), [scene]);
 
   // Start 4 units below the target position
   const baseY = useRef(position[1] - 4);
@@ -86,7 +88,7 @@ function Lotus({
 
   return (
     <group ref={groupRef} position={position} rotation={rotation} scale={scale}>
-      <primitive object={scene} />
+      <primitive object={clonedScene} />
     </group>
   );
 }
@@ -320,6 +322,34 @@ function Scene({
   );
 }
 
+class CanvasErrorBoundary extends React.Component<
+  { children: React.ReactNode; fallback: React.ReactNode; onError?: () => void },
+  { hasError: boolean }
+> {
+  constructor(props: any) {
+    super(props);
+    this.state = { hasError: false };
+  }
+
+  static getDerivedStateFromError(error: any) {
+    return { hasError: true };
+  }
+
+  componentDidCatch(error: any, errorInfo: any) {
+    console.warn("WebGL Canvas failed to render, falling back to 2D UI.", error, errorInfo);
+    if (this.props.onError) {
+      this.props.onError();
+    }
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return this.props.fallback;
+    }
+    return this.props.children;
+  }
+}
+
 export default function KalindiHero() {
   const logoRef = useRef<HTMLDivElement>(null);
   const sectionRef = useRef<HTMLElement>(null);
@@ -328,10 +358,22 @@ export default function KalindiHero() {
   const [isMobile, setIsMobile] = useState(false);
   const [controlDom, setControlDom] = useState<HTMLDivElement | null>(null);
   const [isInView, setIsInView] = useState(true);
+  const [hasWebGL, setHasWebGL] = useState(true);
   const handleLoaded = useMemo(() => () => setIsLoaded(true), []);
 
   useEffect(() => {
     setMounted(true);
+    
+    const webglOk = checkWebGLSupport();
+    setHasWebGL(webglOk);
+    if (!webglOk) {
+      setIsLoaded(true);
+    }
+
+    // Safety timeout: if 3D scene doesn't load/trigger handleLoaded in 3 seconds, show the UI anyway
+    const timer = setTimeout(() => {
+      setIsLoaded(true);
+    }, 3000);
     
     const handleResize = () => {
       setIsMobile(window.innerWidth < 768);
@@ -361,6 +403,7 @@ export default function KalindiHero() {
     };
     
     return () => {
+      clearTimeout(timer);
       window.removeEventListener("resize", handleResize);
       if (sectionRef.current) {
         // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -375,18 +418,21 @@ export default function KalindiHero() {
     <section ref={sectionRef} className="relative h-[120vh] md:h-[140vh] w-full overflow-hidden bg-transparent">
       {/* 3D Canvas wrapper to ensure absolute positioning and correct R3F size */}
       <div className="absolute inset-0 w-full h-full z-0 pointer-events-none">
-        {mounted && (
-          <Canvas
-            camera={{ position: [0, 4, isMobile ? 8.5 : 6.928], fov: isMobile ? 50 : 45 }}
-            gl={{ antialias: true, powerPreference: "high-performance" }}
-            dpr={isMobile ? [1, 1.2] : [1, 1.5]}
-          >
-            {isInView && (
-              <Suspense fallback={null}>
-                <Scene logoRef={logoRef} onLoaded={handleLoaded} isMobile={isMobile} controlDom={controlDom} />
-              </Suspense>
-            )}
-          </Canvas>
+        {mounted && hasWebGL && (
+          <CanvasErrorBoundary fallback={<div className="w-full h-full" />} onError={() => setIsLoaded(true)}>
+            <Canvas
+              camera={{ position: [0, 4, isMobile ? 8.5 : 6.928], fov: isMobile ? 50 : 45 }}
+              gl={{ antialias: true, powerPreference: "high-performance" }}
+              dpr={isMobile ? [1, 1.2] : [1, 1.5]}
+              frameloop={isInView ? "always" : "never"}
+            >
+              {isInView && (
+                <Suspense fallback={null}>
+                  <Scene logoRef={logoRef} onLoaded={handleLoaded} isMobile={isMobile} controlDom={controlDom} />
+                </Suspense>
+              )}
+            </Canvas>
+          </CanvasErrorBoundary>
         )}
       </div>
 
@@ -457,8 +503,8 @@ export default function KalindiHero() {
           className="absolute bottom-10 left-1/2 -translate-x-1/2 flex items-center gap-12"
         >
           {[
-            { v: "15+", l: "Years" },
-            { v: "50K+", l: "Customers" },
+            { v: "5+", l: "Years" },
+            { v: "100+", l: "Customers" },
             { v: "100%", l: "Natural" },
           ].map((s) => (
             <div key={s.l} className="text-center">

@@ -9,6 +9,7 @@ class Product(Base):
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String, nullable=False)
     description = Column(String, nullable=True)
+    price_100g = Column(Float, nullable=True)  # Price for 100g
     price_250g = Column(Float, nullable=True)  # Price for 250g
     price_500g = Column(Float, nullable=True)  # Price for 500g
     price_1000g = Column(Float, nullable=True) # Price for 1000g (1kg)
@@ -29,6 +30,8 @@ class Order(Base):
     shipping_address = Column(String, nullable=False)
     total_amount = Column(Float, nullable=False)
     status = Column(String, default="pending")  # pending, processing, shipped, completed, cancelled
+    discount_code = Column(String, nullable=True)
+    payment_method = Column(String, default="online", nullable=True)
     razorpay_order_id = Column(String, nullable=True)
     razorpay_payment_id = Column(String, nullable=True)
     razorpay_signature = Column(String, nullable=True)

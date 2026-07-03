@@ -106,8 +106,8 @@ export default function Hero() {
           className="mt-24 grid grid-cols-3 gap-12 border-t border-white/10 pt-12 w-full max-w-2xl"
         >
           {[
-            { value: "15+", label: "Years of Excellence" },
-            { value: "50K+", label: "Happy Customers" },
+            { value: "5+", label: "Years of Excellence" },
+            { value: "100+", label: "Happy Customers" },
             { value: "100%", label: "Natural & Pure" },
           ].map((stat) => (
             <div key={stat.label} className="text-center">

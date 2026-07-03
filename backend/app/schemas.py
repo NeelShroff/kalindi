@@ -1,4 +1,4 @@
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel, EmailStr, Field
 from typing import List, Optional
 from datetime import datetime
 
@@ -19,6 +19,7 @@ class AdminLogin(BaseModel):
 class ProductBase(BaseModel):
     name: str
     description: Optional[str] = None
+    price_100g: Optional[float] = None
     price_250g: Optional[float] = None
     price_500g: Optional[float] = None
     price_1000g: Optional[float] = None
@@ -35,6 +36,7 @@ class ProductCreate(ProductBase):
 class ProductUpdate(BaseModel):
     name: Optional[str] = None
     description: Optional[str] = None
+    price_100g: Optional[float] = None
     price_250g: Optional[float] = None
     price_500g: Optional[float] = None
     price_1000g: Optional[float] = None
@@ -56,8 +58,8 @@ class OrderItemBase(BaseModel):
     product_id: Optional[int] = None
     product_name: str
     weight: str
-    price: float
-    quantity: int
+    price: float = Field(..., ge=0)           # Non-negative; server will override with DB price
+    quantity: int = Field(..., ge=1, le=100)  # At least 1, max 100 per line item
 
 class OrderItemCreate(OrderItemBase):
     pass
@@ -75,9 +77,11 @@ class OrderBase(BaseModel):
     customer_phone: str
     shipping_address: str
     total_amount: float
+    payment_method: Optional[str] = "online"
 
 class OrderCreate(OrderBase):
     items: List[OrderItemCreate]
+    discount_code: Optional[str] = None
 
 class OrderUpdateStatus(BaseModel):
     status: str
@@ -87,6 +91,7 @@ class OrderResponse(OrderBase):
     status: str
     created_at: datetime
     items: List[OrderItemResponse]
+    discount_code: Optional[str] = None
     razorpay_order_id: Optional[str] = None
     razorpay_payment_id: Optional[str] = None
     razorpay_signature: Optional[str] = None

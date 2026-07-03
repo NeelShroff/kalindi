@@ -6,11 +6,13 @@ import { motion, AnimatePresence } from "framer-motion";
 import { ShoppingCart, Star, Plus, Minus, X, Check, Info, ShieldAlert } from "lucide-react";
 import Image from "next/image";
 import { useCart } from "@/context/CartContext";
+import { getProductImage, getFallbackImage } from "@/lib/utils";
 
 interface Product {
   id: number;
   name: string;
   description?: string;
+  price_100g?: number | null;
   price_250g: number | null;
   price_500g: number | null;
   price_1000g: number | null;
@@ -31,6 +33,7 @@ export default function ProductCard({ product, index }: ProductCardProps) {
   
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
+
   const [aiDetails, setAiDetails] = useState<{
     benefits?: string[];
     specifications?: Record<string, string>;
@@ -79,6 +82,7 @@ export default function ProductCard({ product, index }: ProductCardProps) {
 
   // Local state for weight selection
   const [selectedWeight, setSelectedWeight] = useState<string>(() => {
+    if (product.price_100g !== null && product.price_100g !== undefined) return "100g";
     if (product.price_500g !== null) return "500g";
     if (product.price_250g !== null) return "250g";
     if (product.price_1000g !== null) return "1kg";
@@ -87,23 +91,14 @@ export default function ProductCard({ product, index }: ProductCardProps) {
 
   const getWeightOptions = (p: Product) => {
     const options = [];
+    if (p.price_100g !== null && p.price_100g !== undefined) options.push("100g");
     if (p.price_250g !== null) options.push("250g");
     if (p.price_500g !== null) options.push("500g");
     if (p.price_1000g !== null) options.push("1kg");
     return options;
   };
 
-  const getFallbackImage = (productName: string) => {
-    const lower = productName.toLowerCase();
-    if (lower.includes("almond")) return "/almonds.webp";
-    if (lower.includes("pistachio")) return "/pistachios.webp";
-    if (lower.includes("cashew")) return "/cashews.webp";
-    if (lower.includes("date")) return "/dates.webp";
-    if (lower.includes("fig")) return "/figs.webp";
-    if (lower.includes("raisin")) return "/raisins.webp";
-    if (lower.includes("makhana") || lower.includes("fox")) return "/makhana.webp";
-    return "/giftbox.webp";
-  };
+
 
   const getProductBenefits = (productName: string) => {
     const lower = productName.toLowerCase();
@@ -144,7 +139,7 @@ export default function ProductCard({ product, index }: ProductCardProps) {
       lower.includes("assort")
     ) {
       return [
-        "Premium luxury packaging",
+        "Premium packing",
         "Perfect gift for health & wellness",
         "Assorted handpicked selection",
         "Hygienically vacuum sealed"
@@ -188,15 +183,10 @@ export default function ProductCard({ product, index }: ProductCardProps) {
     return specs;
   };
 
-  const getProductImage = (p: Product) => {
-    if (p.image_url) {
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8088";
-      return p.image_url.startsWith("/static") ? `${apiUrl}${p.image_url}` : p.image_url;
-    }
-    return getFallbackImage(p.name);
-  };
+
 
   const getSelectedPrice = (p: Product, weight: string) => {
+    if (weight === "100g") return p.price_100g || 0;
     if (weight === "250g") return p.price_250g || 0;
     if (weight === "500g") return p.price_500g || 0;
     if (weight === "1kg") return p.price_1000g || 0;
@@ -205,7 +195,8 @@ export default function ProductCard({ product, index }: ProductCardProps) {
 
   const weightOptions = getWeightOptions(product);
   const price = getSelectedPrice(product, selectedWeight);
-  const originalPrice = Math.round(price * 1.3);
+  const originalPrice = Math.round(price / 0.7);
+  const discountPercentage = originalPrice > 0 ? Math.round(((originalPrice - price) / originalPrice) * 100) : 0;
 
   // Check cart status for this specific weight
   const cartItemId = `${product.id}-${selectedWeight}`;
@@ -291,13 +282,10 @@ export default function ProductCard({ product, index }: ProductCardProps) {
                         {product.tag}
                       </span>
                     )}
-                    <Image
+                    <img
                       src={getProductImage(product)}
                       alt={product.name}
-                      fill
-                      sizes="(max-width: 768px) 100vw, 55vw"
-                      className="object-cover"
-                      priority
+                      className="absolute inset-0 w-full h-full object-cover"
                     />
                   </div>
                   
@@ -358,7 +346,7 @@ export default function ProductCard({ product, index }: ProductCardProps) {
                     <div className="flex items-baseline gap-3">
                       <span className="text-3xl font-black text-[#D4AF37]">₹{price}</span>
                       <span className="text-base text-white/40 line-through">₹{originalPrice}</span>
-                      <span className="text-xs font-bold text-emerald-400 bg-emerald-500/10 px-2.5 py-1 rounded-full uppercase tracking-wider">Save 30%</span>
+                      <span className="text-xs font-bold text-emerald-400 bg-emerald-500/10 px-2.5 py-1 rounded-full uppercase tracking-wider">Save {discountPercentage}%</span>
                     </div>
                     <p className="text-[11px] text-white/40">Inclusive of all taxes. Free shipping on orders above ₹499.</p>
                   </div>
@@ -472,12 +460,10 @@ export default function ProductCard({ product, index }: ProductCardProps) {
                 {product.tag}
               </span>
             )}
-            <Image
+            <img
               src={getProductImage(product)}
               alt={product.name}
-              fill
-              sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 25vw"
-              className="object-cover group-hover:scale-105 transition-transform duration-500"
+              className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
             />
           </div>
 
